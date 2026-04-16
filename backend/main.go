@@ -218,12 +218,32 @@ func handleAttendee(w http.ResponseWriter, r *http.Request) {
 		updated := false
 		stateMutex.Lock()
 		if emoji, ok := msg["emoji"].(string); ok {
-			currentState.Emoji = emoji
-			updated = true
+			// Validate emoji is in allowed list
+			valid := false
+			for _, a := range animals {
+				if a == emoji {
+					valid = true
+					break
+				}
+			}
+			if valid {
+				currentState.Emoji = emoji
+				updated = true
+			}
 		}
 		if color, ok := msg["color"].(string); ok {
-			currentState.Color = color
-			updated = true
+			// Validate color is in allowed list
+			valid := false
+			for _, c := range colors {
+				if c == color {
+					valid = true
+					break
+				}
+			}
+			if valid {
+				currentState.Color = color
+				updated = true
+			}
 		}
 
 		if updated {

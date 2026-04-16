@@ -25,7 +25,7 @@ active_threads = []
 stop_event = threading.Event()
 
 EMOJIS = ["🐶", "🐱", "🐭", "🐹", "🐰", "🦊", "🐻", "🐼", "🐻‍❄️", "🐨", "🐯", "🦁", "🐮", "🐷", "🐸", "🐵", "🦄", "🐝", "🐙"]
-COLORS = ["#4285F4", "#EA4335", "#FBBC04", "#34A853", "#9AA0A6"]
+COLORS = ["#1967D2", "#C5221F", "#F29900", "#188038", "#5F6368"]
 
 def attendee_worker(attendee_id, ws_url):
     """Simulates a single attendee lifecycle: join, interact, leave."""
