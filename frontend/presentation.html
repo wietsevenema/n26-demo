@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloud Next Demo - Live Visualization</title>
+    <link rel="stylesheet" href="style.css">
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            projectId: "venema-2026-1",
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const containerGrid = document.getElementById("container-grid");
+
+        // Map to track which instance is in which slot (DOM element)
+        const instanceToSlot = new Map();
+        // Array of slot elements that are currently empty
+        const availableSlots = [];
+        let totalActive = 0;
+
+        function createSlot() {
+            const slot = document.createElement("div");
+            slot.className = "container-box empty";
+            containerGrid.appendChild(slot);
+            return slot;
+        }
+
+        function updateGridLayout() {
+            // Count total slots (active + empty placeholders) to maintain grid stability
+            const slotCount = containerGrid.children.length;
+            if (slotCount === 0) return;
+
+            // Target a 16:9 aspect ratio for the grid cells
+            const aspectRatio = 16 / 9;
+            const cols = Math.ceil(Math.sqrt(slotCount * aspectRatio));
+            
+            // Limit minimum columns for better aesthetics at low counts
+            const finalCols = Math.max(8, cols);
+            containerGrid.style.setProperty('--cols', finalCols);
+        }
+
+        // Listen to Firestore real-time updates
+        onSnapshot(collection(db, "active_containers"), (snapshot) => {
+            snapshot.docChanges().forEach((change) => {
+                const data = change.doc.data();
+                const id = change.doc.id;
+
+                if (change.type === "added") {
+                    totalActive++;
+                    let slot;
+                    if (availableSlots.length > 0) {
+                        slot = availableSlots.shift();
+                        slot.classList.remove("empty");
+                    } else {
+                        slot = createSlot();
+                        slot.classList.remove("empty");
+                        updateGridLayout(); // Re-calculate when new slots are created
+                    }
+                    
+                    instanceToSlot.set(id, slot);
+                    updateSlot(slot, data, true);
+                }
+                
+                if (change.type === "modified") {
+                    const slot = instanceToSlot.get(id);
+                    if (slot) {
+                        updateSlot(slot, data, false);
+                    }
+                }
+                
+                if (change.type === "removed") {
+                    totalActive--;
+                    const slot = instanceToSlot.get(id);
+                    if (slot) {
+                        clearSlot(slot);
+                        instanceToSlot.delete(id);
+                        availableSlots.push(slot);
+                        // We don't shrink the grid immediately to avoid shifting,
+                        // but we could if availableSlots becomes very large.
+                    }
+                }
+            });
+        });
+
+        function updateSlot(slot, data, isNew) {
+            const statusClass = data.status === 'idle' ? 'status-idle' : 'status-connected';
+            slot.style.backgroundColor = data.color;
+            slot.className = `container-box ${statusClass}`;
+            
+            if (isNew) slot.classList.add("pop-in");
+            
+            slot.innerHTML = `
+                <div class="emoji">${data.emoji}</div>
+                <div class="instance-id">${data.instance_id}</div>
+            `;
+            
+            if (isNew) {
+                setTimeout(() => slot.classList.remove('pop-in'), 600);
+            }
+        }
+
+        function clearSlot(slot) {
+            slot.classList.add('exit');
+            setTimeout(() => {
+                slot.innerHTML = "";
+                slot.style.backgroundColor = "transparent";
+                slot.className = "container-box empty";
+                // Reset styles that might have been set by the exit class
+                slot.style.opacity = "";
+                slot.style.transform = "";
+                slot.style.filter = "";
+            }, 500);
+        }
+
+        // Periodic reflow: clean up empty slots every minute
+        setInterval(() => {
+            console.log("Reflowing grid: removing empty slots.");
+            while (availableSlots.length > 0) {
+                const slot = availableSlots.shift();
+                if (slot.parentNode === containerGrid) {
+                    slot.remove();
+                }
+            }
+        }, 60000);
+    </script>
+</head>
+<body class="presentation">
+    <main>
+        <div id="container-grid" class="grid">
+            <!-- Slots will be injected and managed here -->
+        </div>
+    </main>
+</body>
+</html>

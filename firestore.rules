@@ -1,0 +1,9 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /active_containers/{container} {
+      allow read: if true;
+      allow write: if false; // Only backend (privileged) can write
+    }
+  }
+}

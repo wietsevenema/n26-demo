@@ -1,0 +1,144 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Google Sans', Arial, sans-serif;
+    background-color: #f8f9fa;
+    color: #202124;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; 
+}
+
+/* Presentation Screen Layout */
+.presentation {
+    display: flex;
+    flex-direction: column;
+}
+
+.presentation main {
+    flex: 1;
+    padding: 2px; /* Minimal padding for edge-to-edge grid */
+    overflow: hidden; 
+    display: flex;
+    flex-direction: column;
+}
+
+#container-grid {
+    flex: 1;
+    display: grid;
+    /* Columns determined by JS */
+    grid-template-columns: repeat(var(--cols, 8), 1fr);
+    grid-auto-rows: 1fr;
+    gap: 2px; /* Very small gap for high density */
+    align-content: stretch;
+}
+
+.container-box {
+    background-color: white;
+    border-radius: 4px; /* Sharper corners for small boxes */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    border: 1px solid rgba(0,0,0,0.03);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    padding: 1px;
+}
+
+.container-box.empty {
+    background-color: rgba(0,0,0,0.01);
+    border: 1px dashed rgba(0,0,0,0.05);
+    box-shadow: none;
+}
+
+/* Highly responsive font sizes */
+.container-box .emoji {
+    font-size: min(3.5vh, 3.5vw);
+    line-height: 1;
+}
+
+.container-box .instance-id {
+    font-size: min(1vh, 1vw);
+    font-weight: 500;
+    color: rgba(255,255,255,0.9);
+    font-family: monospace;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 90%;
+}
+
+.container-box.pop-in {
+    animation: popIn 0.4s ease-out;
+}
+
+@keyframes popIn {
+    from { transform: scale(0.5); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+/* Attendee Screen */
+.container {
+    max-width: 500px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+}
+
+.preview-box {
+    height: 150px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 2rem;
+    border: 1px solid #dadce0;
+}
+
+.controls {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+
+.emoji-grid, .color-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+}
+
+button {
+    padding: 12px;
+    border: 1px solid #dadce0;
+    border-radius: 8px;
+    background: white;
+    cursor: pointer;
+}
+
+.start-btn {
+    width: 100%;
+    padding: 1.2rem;
+    background-color: #1a73e8;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: 500;
+    cursor: pointer;
+}

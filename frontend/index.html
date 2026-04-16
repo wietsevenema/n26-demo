@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloud Run Instance - Attendee</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://unpkg.com/htmx.org/dist/ext/ws.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <style id="container-preview-style"></style>
+</head>
+<body>
+    <div class="container" id="main-container">
+        <div id="setup-view">
+            <h1>Cloud Run Demo</h1>
+            <p style="text-align: center; margin-bottom: 2rem; color: #70757a;">
+                Each connection spins up a dedicated container instance with 
+                <strong>concurrency=1</strong>.
+            </p>
+            <button class="start-btn" 
+                    onclick="startContainer()">
+                Start Container Instance
+            </button>
+        </div>
+
+        <!-- The active view is hidden and HAS NO WS ATTRIBUTES initially -->
+        <div id="active-view" style="display:none;">
+            <h1>Your Container</h1>
+            
+            <div id="container-preview" class="preview-box">
+                <div id="metrics">
+                    <p>Spinning up instance...</p>
+                </div>
+            </div>
+
+            <div class="controls">
+                <div class="control-group">
+                    <label>Change Emoji:</label>
+                    <div class="emoji-grid">
+                        <button ws-send name="emoji" value="🐶">🐶</button>
+                        <button ws-send name="emoji" value="🐱">🐱</button>
+                        <button ws-send name="emoji" value="🦊">🦊</button>
+                        <button ws-send name="emoji" value="🐼">🐼</button>
+                        <button ws-send name="emoji" value="🦁">🦁</button>
+                        <button ws-send name="emoji" value="🐸">🐸</button>
+                        <button ws-send name="emoji" value="🐵">🐵</button>
+                        <button ws-send name="emoji" value="🦄">🦄</button>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label>Change Color:</label>
+                    <div class="color-grid">
+                        <button ws-send name="color" value="#4285F4" style="background-color: #4285F4;"></button>
+                        <button ws-send name="color" value="#EA4335" style="background-color: #EA4335;"></button>
+                        <button ws-send name="color" value="#FBBC04" style="background-color: #FBBC04;"></button>
+                        <button ws-send name="color" value="#34A853" style="background-color: #34A853;"></button>
+                        <button ws-send name="color" value="#9AA0A6" style="background-color: #9AA0A6;"></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function startContainer() {
+            document.getElementById('setup-view').style.display = 'none';
+            const activeView = document.getElementById('active-view');
+            activeView.style.display = 'block';
+            
+            // Add HTMX attributes dynamically
+            activeView.setAttribute('hx-ext', 'ws');
+            activeView.setAttribute('ws-connect', '/ws');
+            
+            // Trigger HTMX to process the new attributes and open the connection
+            htmx.process(activeView);
+        }
+    </script>
+</body>
+</html>
