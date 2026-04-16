@@ -30,12 +30,23 @@ An interactive, real-time visualization of Cloud Run's serverless scalability. T
 - Python 3.12+ (with `uv`) for simulation.
 
 ### 2. Deployment
-Follow the detailed **[Deployment Guide (DEPLOY.md)](./DEPLOY.md)** for step-by-step instructions on setting up the infrastructure, services, and security rules.
+Follow the detailed **[Project Setup (DEPLOY.md)](./DEPLOY.md)** for initial infrastructure provisioning and the **[Component Update Guide (DEPLOYMENT_GUIDE.md)](./DEPLOYMENT_GUIDE.md)** for pushing changes to the backend and frontend.
 
-### 3. Running the Simulation
-To simulate a large-scale audience (e.g., 600 concurrent attendees):
+### 3. Simulating Attendees
+The project includes a Python script to simulate hundreds of concurrent attendees. It uses the `uv` script runner to manage its own dependencies.
+
+**Basic Usage:**
 ```bash
-./simulate_attendees.py --count 600
+./simulate_attendees.py --count 100
+```
+
+**Available Flags:**
+- `--count`: The target number of concurrent attendees to maintain (default: 30).
+- `--url`: The WebSocket endpoint of your deployment (default: `ws://34.160.220.162/ws`).
+
+**Example: Simulating a different deployment:**
+```bash
+./simulate_attendees.py --count 500 --url ws://your-load-balancer-ip/ws
 ```
 
 ## Repository Structure
