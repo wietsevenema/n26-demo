@@ -21,7 +21,8 @@ gcloud services enable \
     cloudbuild.googleapis.com \
     compute.googleapis.com \
     firestore.googleapis.com \
-    artifactregistry.googleapis.com
+    artifactregistry.googleapis.com \
+    cloudscheduler.googleapis.com
 ```
 
 ### Initialize Firestore
