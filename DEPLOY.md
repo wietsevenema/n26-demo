@@ -171,14 +171,36 @@ service cloud.firestore {
 }
 ```
 
-### Firestore TTL Policy
-To automatically clean up stale instances (e.g., if a container crashes and misses its cleanup signal):
-1. Go to [Firestore TTL Settings](https://console.cloud.google.com/firestore/databases/-default-/settings).
-2. Click **Enable TTL**.
-3. Select the collection: `active_containers`.
-4. Select the timestamp field: `ttl`.
-5. Click **Enable**.
-*Note: It can take up to 72 hours for the initial cleanup to begin after enabling the policy.*
+### Fast TTL Cleanup (Cloud Run + Scheduler)
+Since native Firestore TTL is slow, we use a dedicated internal service for 1-minute cleanup:
+
+1. **Build and Deploy Cleanup Service:**
+   ```bash
+   cd cleanup
+   docker build --platform linux/amd64 -t us-west4-docker.pkg.dev/${PROJECT_ID}/cloud-run-demo/cleanup .
+   docker push us-west4-docker.pkg.dev/${PROJECT_ID}/cloud-run-demo/cleanup
+   gcloud run deploy cleanup-backend \
+       --image us-west4-docker.pkg.dev/${PROJECT_ID}/cloud-run-demo/cleanup \
+       --region $REGION --no-allow-unauthenticated --ingress internal
+   ```
+
+2. **Configure Scheduler:**
+   ```bash
+   # Create Service Account
+   gcloud iam service-accounts create sweep-scheduler-sa --display-name="TTL Cleanup Scheduler"
+
+   # Grant Permissions
+   gcloud run services add-iam-policy-binding cleanup-backend \
+       --region $REGION --member="serviceAccount:sweep-scheduler-sa@${PROJECT_ID}.iam.gserviceaccount.com" \
+       --role="roles/run.invoker"
+
+   # Create Job
+   CLEANUP_URL=$(gcloud run services describe cleanup-backend --region $REGION --format="value(status.url)")
+   gcloud scheduler jobs create http cleanup-zombies \
+       --location $REGION --schedule="* * * * *" --uri="$CLEANUP_URL/" \
+       --http-method=POST --oidc-service-account-email="sweep-scheduler-sa@${PROJECT_ID}.iam.gserviceaccount.com" \
+       --oidc-token-audience="$CLEANUP_URL/"
+   ```
 
 ### Presentation Frontend
 Update the `projectId` in `frontend/presentation.html` to match your project if it was hardcoded during development.

@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -37,19 +38,21 @@ var (
 	lastTotalCPU uint64
 	lastIdleCPU  uint64
 )
-
 type ContainerState struct {
-	InstanceID   string    `firestore:"instance_id" json:"instance_id"`
-	Emoji        string    `firestore:"emoji" json:"emoji"`
-	Color        string    `firestore:"color" json:"color"`
-	MemoryMB     int64     `firestore:"memory_mb" json:"memory_mb"`
-	CPUUtil      float64   `firestore:"cpu_util" json:"cpu_util"`
-	Region       string    `firestore:"region" json:"region"`
-	ServiceName  string    `firestore:"service_name" json:"service_name"`
-	RevisionName string    `firestore:"revision_name" json:"revision_name"`
-	Status       string    `firestore:"status" json:"status"`
-	TTL          time.Time `firestore:"ttl" json:"-"`
+	InstanceID    string    `firestore:"instance_id" json:"instance_id"`
+	Emoji         string    `firestore:"emoji" json:"emoji"`
+	Color         string    `firestore:"color" json:"color"`
+	MemoryMB      int64     `firestore:"memory_mb" json:"memory_mb"`
+	TotalMemoryMB int64     `firestore:"total_memory_mb" json:"total_memory_mb"`
+	CPUUtil       float64   `firestore:"cpu_util" json:"cpu_util"`
+	Region        string    `firestore:"region" json:"region"`
+	ServiceName   string    `firestore:"service_name" json:"service_name"`
+	RevisionName  string    `firestore:"revision_name" json:"revision_name"`
+	Status        string    `firestore:"status" json:"status"`
+	LastUpdate    time.Time `firestore:"last_update" json:"last_update"`
+	TTL           time.Time `firestore:"ttl" json:"-"`
 }
+
 
 func main() {
 	ctx := context.Background()
@@ -78,20 +81,23 @@ func main() {
 	serviceName := os.Getenv("K_SERVICE")
 	revisionName := os.Getenv("K_REVISION")
 
-	// Initialize global state on boot
+	// Initialize global state on boot (Neutral "Empty" state)
 	currentState = &ContainerState{
-		InstanceID:   instanceID,
-		Emoji:        "📦",
-		Color:        "#e0e0e0",
-		Status:       "idle",
-		MemoryMB:     getMemoryMB(),
-		CPUUtil:      getCPUUtil(),
-		Region:       region,
-		ServiceName:  serviceName,
-		RevisionName: revisionName,
-		TTL:          time.Now().Add(2 * time.Minute),
+		InstanceID:    instanceID,
+		Emoji:         "📦",
+		Color:         "#e0e0e0",
+		Status:        "idle",
+		MemoryMB:      getMemoryMB(),
+		TotalMemoryMB: getMemoryLimitMB(),
+		CPUUtil:       getCPUUtil(),
+		Region:        region,
+		ServiceName:   serviceName,
+		RevisionName:  revisionName,
+		LastUpdate:    time.Now(),
+		TTL:           time.Now().Add(2 * time.Minute),
 	}
 	updateFirestore(ctx)
+
 
 	// Global ticker for container metrics (belts and suspenders)
 	go func() {
@@ -154,11 +160,12 @@ func handleAttendee(w http.ResponseWriter, r *http.Request) {
 	}
 	defer conn.Close()
 
-	// Update global state on connection
+	// Assign a vibrant identity only on connection
 	stateMutex.Lock()
 	currentState.Status = "connected"
 	currentState.Emoji = animals[rand.Intn(len(animals))]
 	currentState.Color = colors[rand.Intn(len(colors))]
+	currentState.LastUpdate = time.Now()
 	currentState.TTL = time.Now().Add(2 * time.Minute)
 	stateMutex.Unlock()
 
@@ -183,17 +190,18 @@ func handleAttendee(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	// Revert to idle on disconnect
+	// Revert to idle and reset identity completely on disconnect
 	defer func() {
 		close(done)
 		stateMutex.Lock()
 		currentState.Status = "idle"
 		currentState.Emoji = "📦"
 		currentState.Color = "#e0e0e0"
+		currentState.LastUpdate = time.Now()
 		currentState.TTL = time.Now().Add(2 * time.Minute)
 		stateMutex.Unlock()
 		updateFirestore(context.Background())
-		log.Printf("WebSocket closed, reverted to idle %s", instanceID)
+		log.Printf("WebSocket closed, reverted to neutral idle %s", instanceID)
 	}()
 
 	for {
@@ -239,10 +247,15 @@ func sendMetrics(conn *websocket.Conn) error {
 	stateCopy := *currentState
 	stateMutex.Unlock()
 
+	memoryDisplay := fmt.Sprintf("%d MB", stateCopy.MemoryMB)
+	if stateCopy.TotalMemoryMB > 0 {
+		memoryDisplay = fmt.Sprintf("%d / %d MB", stateCopy.MemoryMB, stateCopy.TotalMemoryMB)
+	}
+
 	metricsHTML := fmt.Sprintf(`
 		<div id="metrics" hx-swap-oob="innerHTML">
 			<p>Instance: %s</p>
-			<p>Memory: %d MB | CPU: %.1f%%</p>
+			<p>Memory: %s | CPU: %.1f%%</p>
 			<p>Region: %s</p>
 			<p>Service: %s</p>
 			<p>Revision: %s</p>
@@ -251,7 +264,7 @@ func sendMetrics(conn *websocket.Conn) error {
 		<style id="container-preview-style" hx-swap-oob="innerHTML">
 			#container-preview { background-color: %s; }
 		</style>
-	`, stateCopy.InstanceID, stateCopy.MemoryMB, stateCopy.CPUUtil, stateCopy.Region, stateCopy.ServiceName, stateCopy.RevisionName, stateCopy.Status, stateCopy.Color)
+	`, stateCopy.InstanceID, memoryDisplay, stateCopy.CPUUtil, stateCopy.Region, stateCopy.ServiceName, stateCopy.RevisionName, stateCopy.Status, stateCopy.Color)
 	metricsHTML = strings.ReplaceAll(metricsHTML, "\n", "")
 	return conn.WriteMessage(websocket.TextMessage, []byte(metricsHTML))
 }
@@ -260,6 +273,25 @@ func getMemoryMB() int64 {
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
 	return int64(m.Alloc / 1024 / 1024)
+}
+
+func getMemoryLimitMB() int64 {
+	// Try cgroup v2
+	data, err := os.ReadFile("/sys/fs/cgroup/memory.max")
+	if err != nil {
+		// Try cgroup v1
+		data, err = os.ReadFile("/sys/fs/cgroup/memory/memory.limit_in_bytes")
+	}
+	if err == nil {
+		limitStr := strings.TrimSpace(string(data))
+		if limitStr != "max" {
+			limit, err := strconv.ParseInt(limitStr, 10, 64)
+			if err == nil && limit > 0 && limit < 1024*1024*1024*1024 {
+				return limit / 1024 / 1024
+			}
+		}
+	}
+	return 0
 }
 
 func getCPUUtil() float64 {
