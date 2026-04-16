@@ -63,12 +63,13 @@ body {
 .container-box .emoji {
     font-size: min(3.5vh, 3.5vw);
     line-height: 1;
+    color: white; /* Ensure emoji/text is white */
 }
 
 .container-box .instance-id {
     font-size: min(1vh, 1vw);
     font-weight: 500;
-    color: rgba(255,255,255,0.9);
+    color: white; /* Force white text */
     font-family: monospace;
     white-space: nowrap;
     overflow: hidden;

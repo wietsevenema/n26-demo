@@ -28,7 +28,7 @@ var (
 		CheckOrigin: func(r *http.Request) bool { return true },
 	}
 	animals = []string{"🐶", "🐱", "🐭", "🐹", "🐰", "🦊", "🐻", "🐼", "🐻‍❄️", "🐨", "🐯", "🦁", "🐮", "🐷", "🐸", "🐵", "🦄", "🐝", "🐙"}
-	colors  = []string{"#4285F4", "#EA4335", "#FBBC04", "#34A853", "#9AA0A6"}
+	colors  = []string{"#1967D2", "#C5221F", "#F29900", "#188038", "#5F6368"}
 
 	currentState    *ContainerState
 	stateMutex      sync.Mutex
@@ -49,7 +49,6 @@ type ContainerState struct {
 	ServiceName   string    `firestore:"service_name" json:"service_name"`
 	RevisionName  string    `firestore:"revision_name" json:"revision_name"`
 	Status        string    `firestore:"status" json:"status"`
-	LastUpdate    time.Time `firestore:"last_update" json:"last_update"`
 	TTL           time.Time `firestore:"ttl" json:"-"`
 }
 
@@ -85,7 +84,7 @@ func main() {
 	currentState = &ContainerState{
 		InstanceID:    instanceID,
 		Emoji:         "📦",
-		Color:         "#e0e0e0",
+		Color:         "#5F6368",
 		Status:        "idle",
 		MemoryMB:      getMemoryMB(),
 		TotalMemoryMB: getMemoryLimitMB(),
@@ -93,7 +92,6 @@ func main() {
 		Region:        region,
 		ServiceName:   serviceName,
 		RevisionName:  revisionName,
-		LastUpdate:    time.Now(),
 		TTL:           time.Now().Add(2 * time.Minute),
 	}
 	updateFirestore(ctx)
@@ -165,7 +163,6 @@ func handleAttendee(w http.ResponseWriter, r *http.Request) {
 	currentState.Status = "connected"
 	currentState.Emoji = animals[rand.Intn(len(animals))]
 	currentState.Color = colors[rand.Intn(len(colors))]
-	currentState.LastUpdate = time.Now()
 	currentState.TTL = time.Now().Add(2 * time.Minute)
 	stateMutex.Unlock()
 
@@ -196,8 +193,7 @@ func handleAttendee(w http.ResponseWriter, r *http.Request) {
 		stateMutex.Lock()
 		currentState.Status = "idle"
 		currentState.Emoji = "📦"
-		currentState.Color = "#e0e0e0"
-		currentState.LastUpdate = time.Now()
+		currentState.Color = "#5F6368"
 		currentState.TTL = time.Now().Add(2 * time.Minute)
 		stateMutex.Unlock()
 		updateFirestore(context.Background())
