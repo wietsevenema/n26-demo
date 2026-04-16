@@ -14,6 +14,15 @@ import sys
 import random
 import json
 import argparse
+import logging
+
+# Setup logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(message)s',
+    handlers=[logging.StreamFileHandler(sys.stdout) if hasattr(logging, "StreamFileHandler") else logging.StreamHandler(sys.stdout)]
+)
+logger = logging.getLogger("simulation")
 
 # Configuration
 DEFAULT_WS_URL = "ws://34.160.220.162/ws"
@@ -25,15 +34,16 @@ active_threads = []
 stop_event = threading.Event()
 
 EMOJIS = ["🐶", "🐱", "🐭", "🐹", "🐰", "🦊", "🐻", "🐼", "🐻‍❄️", "🐨", "🐯", "🦁", "🐮", "🐷", "🐸", "🐵", "🦄", "🐝", "🐙"]
-COLORS = ["#1967D2", "#C5221F", "#F29900", "#188038", "#5F6368"]
+COLORS = ["#1967D2", "#C5221F", "#F29900", "#188038"]
 
 def attendee_worker(attendee_id, ws_url):
     """Simulates a single attendee lifecycle: join, interact, leave."""
-    duration = random.uniform(30, 120) # Stay for 30-120 seconds for larger simulations
+    duration = random.uniform(300, 900) # Stay for 5-15 minutes for stability
     start_time = time.time()
     
     try:
-        ws = websocket.create_connection(ws_url)
+        ws = websocket.create_connection(ws_url, timeout=10)
+        logger.info(f"Attendee {attendee_id}: Connected.")
         
         # Initial customization
         ws.send(json.dumps({
@@ -44,30 +54,32 @@ def attendee_worker(attendee_id, ws_url):
         # Interaction loop
         while not stop_event.is_set() and (time.time() - start_time) < duration:
             try:
+                # 1% chance to interact (very human, less flickery)
+                if random.random() < 0.01:
+                    if random.random() < 0.5:
+                        ws.send(json.dumps({"emoji": random.choice(EMOJIS)}))
+                    else:
+                        ws.send(json.dumps({"color": random.choice(COLORS)}))
+                
+                # Drain metrics with a short timeout to stay responsive
                 ws.settimeout(1.0)
-                ws.recv() # Drain metrics
+                ws.recv() 
             except websocket.WebSocketTimeoutException:
                 pass
-            except Exception:
+            except Exception as e:
+                logger.warning(f"Attendee {attendee_id}: Connection error: {e}")
                 break
             
-            # 5% chance to interact to keep the grid "alive" without flooding
-            if random.random() < 0.05:
-                ws.send(json.dumps({
-                    "emoji": random.choice(EMOJIS),
-                    "color": random.choice(COLORS)
-                }))
-            
-            time.sleep(random.uniform(5, 15))
+            time.sleep(random.uniform(10, 30))
             
         ws.close()
+        logger.info(f"Attendee {attendee_id}: Disconnected normally.")
     except Exception as e:
-        pass
+        logger.error(f"Attendee {attendee_id}: Failed to connect: {e}")
 
 def signal_handler(sig, frame):
     print("\nStopping simulation gracefully...")
     stop_event.set()
-    # No need to join threads here, we'll just exit
     sys.exit(0)
 
 if __name__ == "__main__":
@@ -83,16 +95,14 @@ if __name__ == "__main__":
 
     signal.signal(signal.SIGINT, signal_handler)
     
-    print(f"Starting simulation: Target {target} concurrent @ {ws_url}")
+    logger.info(f"Starting simulation: Target {target} concurrent @ {ws_url}")
     
     attendee_counter = 0
     while not stop_event.is_set():
-        # Clean up finished threads
         active_threads = [t for t in active_threads if t.is_alive()]
         current_count = len(active_threads)
         
         if current_count < target:
-            # Scale spawning rate based on distance to target
             diff = target - current_count
             to_spawn = max(1, min(10, diff // 2)) 
             
@@ -103,6 +113,6 @@ if __name__ == "__main__":
                 t.start()
                 active_threads.append(t)
             
-            print(f"Current: {len(active_threads)} / Target: {target}", end='\r')
+            logger.info(f"Simulation Status: {len(active_threads)} / {target}")
         
-        time.sleep(0.5)
+        time.sleep(1.0)

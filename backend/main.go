@@ -36,7 +36,7 @@ var (
 		CheckOrigin: func(r *http.Request) bool { return true },
 	}
 	animals = []string{"🐶", "🐱", "🐭", "🐹", "🐰", "🦊", "🐻", "🐼", "🐻‍❄️", "🐨", "🐯", "🦁", "🐮", "🐷", "🐸", "🐵", "🦄", "🐝", "🐙"}
-	colors  = []string{"#1967D2", "#C5221F", "#F29900", "#188038", "#5F6368"}
+	colors  = []string{"#1967D2", "#C5221F", "#F29900", "#188038"}
 
 	currentState    *ContainerState
 	stateMutex      sync.Mutex
@@ -89,7 +89,8 @@ func main() {
 	}
 	defer firestoreClient.Close()
 
-	docRef = firestoreClient.Collection("active_containers").Doc(instanceID)
+	// Use Firestore to generate a truly unique Document ID
+	docRef = firestoreClient.Collection("active_containers").NewDoc()
 
 	// Fetch cloud metadata
 	region := getRegion()
