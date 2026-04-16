@@ -128,14 +128,23 @@
             }, 500);
         }
 
-        // Periodic reflow: clean up empty slots every minute
+        // Periodic reflow: clean up empty slots every minute, but only if > 25% are empty
         setInterval(() => {
-            console.log("Reflowing grid: removing empty slots.");
-            while (availableSlots.length > 0) {
-                const slot = availableSlots.shift();
-                if (slot.parentNode === containerGrid) {
-                    slot.remove();
+            const totalSlots = containerGrid.children.length;
+            if (totalSlots === 0) return;
+            
+            const emptyCount = availableSlots.length;
+            const emptyRatio = emptyCount / totalSlots;
+
+            if (emptyRatio >= 0.25) {
+                console.log(`Reflowing grid: ${Math.round(emptyRatio * 100)}% empty slots found.`);
+                while (availableSlots.length > 0) {
+                    const slot = availableSlots.shift();
+                    if (slot.parentNode === containerGrid) {
+                        slot.remove();
+                    }
                 }
+                updateGridLayout();
             }
         }, 60000);
     </script>
