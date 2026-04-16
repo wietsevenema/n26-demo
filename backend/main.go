@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -20,6 +21,13 @@ import (
 	"cloud.google.com/go/firestore"
 	"github.com/gorilla/websocket"
 )
+
+//go:embed instance-ids.json
+var embeddedFiles embed.FS
+
+type NameRecord struct {
+	Name string `json:"name"`
+}
 
 var (
 	projectID  = "venema-2026-1"
@@ -57,10 +65,18 @@ func main() {
 	ctx := context.Background()
 	var err error
 
-	instanceID = os.Getenv("INSTANCE_ID")
-	if instanceID == "" {
-		instanceID = fmt.Sprintf("inst-%04d", rand.Intn(10000))
+	// Load instance IDs from embedded JSON
+	data, err := embeddedFiles.ReadFile("instance-ids.json")
+	if err != nil {
+		log.Fatalf("Failed to read embedded instance-ids.json: %v", err)
 	}
+	var names []NameRecord
+	if err := json.Unmarshal(data, &names); err != nil {
+		log.Fatalf("Failed to unmarshal instance IDs: %v", err)
+	}
+
+	// Pick a random ID from the list
+	instanceID = names[rand.Intn(len(names))].Name
 
 	envProjectID := os.Getenv("GOOGLE_CLOUD_PROJECT")
 	if envProjectID != "" {
@@ -83,8 +99,8 @@ func main() {
 	// Initialize global state on boot (Neutral "Empty" state)
 	currentState = &ContainerState{
 		InstanceID:    instanceID,
-		Emoji:         "📦",
-		Color:         "#5F6368",
+		Emoji:         "⏳",
+		Color:         "#BDC1C6",
 		Status:        "idle",
 		MemoryMB:      getMemoryMB(),
 		TotalMemoryMB: getMemoryLimitMB(),
@@ -192,8 +208,8 @@ func handleAttendee(w http.ResponseWriter, r *http.Request) {
 		close(done)
 		stateMutex.Lock()
 		currentState.Status = "idle"
-		currentState.Emoji = "📦"
-		currentState.Color = "#5F6368"
+		currentState.Emoji = "⏳"
+		currentState.Color = "#BDC1C6"
 		currentState.TTL = time.Now().Add(2 * time.Minute)
 		stateMutex.Unlock()
 		updateFirestore(context.Background())

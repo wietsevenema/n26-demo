@@ -46,7 +46,7 @@ body {
     align-items: center;
     justify-content: center;
     box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-    border: 1px solid rgba(0,0,0,0.03);
+    border: 3px solid rgba(0,0,0,0.1);
     transition: all 0.3s ease;
     position: relative;
     overflow: hidden;
@@ -63,13 +63,17 @@ body {
 .container-box .emoji {
     font-size: min(3.5vh, 3.5vw);
     line-height: 1;
-    color: white; /* Ensure emoji/text is white */
+    color: white; /* Default to white for connected states */
+}
+
+.status-idle .emoji, .status-idle .instance-id {
+    color: #202124 !important; /* High-contrast black for idle state */
 }
 
 .container-box .instance-id {
     font-size: min(1vh, 1vw);
     font-weight: 500;
-    color: white; /* Force white text */
+    color: white; 
     font-family: monospace;
     white-space: nowrap;
     overflow: hidden;
