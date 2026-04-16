@@ -44,10 +44,16 @@ The project includes a Python script to simulate hundreds of concurrent attendee
 - `--count`: The target number of concurrent attendees to maintain (default: 30).
 - `--url`: The WebSocket endpoint of your deployment (default: `ws://34.160.220.162/ws`).
 
-**Example: Simulating a different deployment:**
+### 4. Monitoring & Logs
+You can monitor the live behavior of the container instances (connections, customizations, and terminations) using Cloud Logging.
+
+**View Live Backend Logs:**
 ```bash
-./simulate_attendees.py --count 500 --url ws://your-load-balancer-ip/ws
+gcloud logging read "resource.type=cloud_run_revision AND resource.labels.service_name=attendee-backend" --limit 50 --format="table(timestamp,textPayload)" --project venema-2026-1
 ```
+
+**Cloud Console:**
+Visit the [Cloud Run Console](https://console.cloud.google.com/run/detail/us-west4/attendee-backend/logs) to view the Logs Explorer with advanced filtering and real-time streaming.
 
 ## Repository Structure
 

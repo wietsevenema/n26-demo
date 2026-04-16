@@ -111,11 +111,14 @@
         // 1-Minute Reflow: The critical "Cleaning" interval
         setInterval(() => {
             const totalSlots = containerGrid.children.length;
+            if (totalSlots === 0) return;
+
             const emptyCount = availableSlots.length;
+            const emptyRatio = emptyCount / totalSlots;
             
-            // Only reflow if > 60 slots AND significant occupancy drop
-            if (totalSlots > 60 && (emptyCount / totalSlots) >= 0.25) {
-                console.log("Reflowing grid: Compacting layout and purging surplus slots.");
+            // Trigger reflow based solely on vacancy threshold (>= 25%)
+            if (emptyRatio >= 0.25) {
+                console.log(`Reflowing grid: ${Math.round(emptyRatio * 100)}% empty slots found. Compacting.`);
                 
                 // 1. Collect active slots in order
                 const activeSlots = Array.from(containerGrid.children).filter(s => !s.classList.contains('empty'));
@@ -124,7 +127,7 @@
                 containerGrid.innerHTML = "";
                 activeSlots.forEach(s => containerGrid.appendChild(s));
                 
-                // 3. Fill with baseline empty slots
+                // 3. Fill with baseline empty slots (always maintain at least 60 total)
                 availableSlots = [];
                 const targetTotal = Math.max(60, activeSlots.length);
                 while (containerGrid.children.length < targetTotal) {
