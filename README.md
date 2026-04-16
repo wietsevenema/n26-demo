@@ -2,8 +2,6 @@
 
 An interactive, real-time visualization of Cloud Run's serverless scalability. This demo allows hundreds of attendees to spin up their own isolated container instances, customize their appearance, and see them appear on a shared live dashboard.
 
-![Stable High-Density Grid](https://via.placeholder.com/1920x1080?text=Live+Dashboard+Visualization)
-
 ## Key Features
 
 - **Isolated Instances:** Each attendee connection triggers a dedicated Cloud Run container (configured with `max-concurrency=1`).
