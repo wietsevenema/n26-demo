@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"math/rand"
 	"net/http"
@@ -26,22 +27,28 @@ var (
 		CheckOrigin: func(r *http.Request) bool { return true },
 	}
 	animals = []string{"🐶", "🐱", "🐭", "🐹", "🐰", "🦊", "🐻", "🐼", "🐻‍❄️", "🐨", "🐯", "🦁", "🐮", "🐷", "🐸", "🐵", "🦄", "🐝", "🐙"}
-	colors  = []string{"#FFADAD", "#FFD6A5", "#FDFFB6", "#CAFFBF", "#9BF6FF", "#A0C4FF", "#BDB2FF", "#FFC6FF"}
+	colors  = []string{"#4285F4", "#EA4335", "#FBBC04", "#34A853", "#9AA0A6"}
 
 	currentState    *ContainerState
 	stateMutex      sync.Mutex
 	docRef          *firestore.DocumentRef
 	firestoreClient *firestore.Client
+
+	lastTotalCPU uint64
+	lastIdleCPU  uint64
 )
 
 type ContainerState struct {
-	InstanceID string    `firestore:"instance_id" json:"instance_id"`
-	Emoji      string    `firestore:"emoji" json:"emoji"`
-	Color      string    `firestore:"color" json:"color"`
-	MemoryMB   int64     `firestore:"memory_mb" json:"memory_mb"`
-	Status     string    `firestore:"status" json:"status"`
-	LastUpdate time.Time `firestore:"last_update" json:"last_update"`
-	TTL        time.Time `firestore:"ttl" json:"-"`
+	InstanceID   string    `firestore:"instance_id" json:"instance_id"`
+	Emoji        string    `firestore:"emoji" json:"emoji"`
+	Color        string    `firestore:"color" json:"color"`
+	MemoryMB     int64     `firestore:"memory_mb" json:"memory_mb"`
+	CPUUtil      float64   `firestore:"cpu_util" json:"cpu_util"`
+	Region       string    `firestore:"region" json:"region"`
+	ServiceName  string    `firestore:"service_name" json:"service_name"`
+	RevisionName string    `firestore:"revision_name" json:"revision_name"`
+	Status       string    `firestore:"status" json:"status"`
+	TTL          time.Time `firestore:"ttl" json:"-"`
 }
 
 func main() {
@@ -66,15 +73,23 @@ func main() {
 
 	docRef = firestoreClient.Collection("active_containers").Doc(instanceID)
 
+	// Fetch cloud metadata
+	region := getRegion()
+	serviceName := os.Getenv("K_SERVICE")
+	revisionName := os.Getenv("K_REVISION")
+
 	// Initialize global state on boot
 	currentState = &ContainerState{
-		InstanceID: instanceID,
-		Emoji:      "📦",
-		Color:      "#e0e0e0",
-		Status:     "idle",
-		MemoryMB:   getMemoryMB(),
-		LastUpdate: time.Now(),
-		TTL:        time.Now().Add(2 * time.Minute),
+		InstanceID:   instanceID,
+		Emoji:        "📦",
+		Color:        "#e0e0e0",
+		Status:       "idle",
+		MemoryMB:     getMemoryMB(),
+		CPUUtil:      getCPUUtil(),
+		Region:       region,
+		ServiceName:  serviceName,
+		RevisionName: revisionName,
+		TTL:          time.Now().Add(2 * time.Minute),
 	}
 	updateFirestore(ctx)
 
@@ -85,7 +100,7 @@ func main() {
 		for range ticker.C {
 			stateMutex.Lock()
 			currentState.MemoryMB = getMemoryMB()
-			currentState.LastUpdate = time.Now()
+			currentState.CPUUtil = getCPUUtil()
 			currentState.TTL = time.Now().Add(2 * time.Minute)
 			stateMutex.Unlock()
 			updateFirestore(context.Background())
@@ -144,7 +159,6 @@ func handleAttendee(w http.ResponseWriter, r *http.Request) {
 	currentState.Status = "connected"
 	currentState.Emoji = animals[rand.Intn(len(animals))]
 	currentState.Color = colors[rand.Intn(len(colors))]
-	currentState.LastUpdate = time.Now()
 	currentState.TTL = time.Now().Add(2 * time.Minute)
 	stateMutex.Unlock()
 
@@ -176,7 +190,6 @@ func handleAttendee(w http.ResponseWriter, r *http.Request) {
 		currentState.Status = "idle"
 		currentState.Emoji = "📦"
 		currentState.Color = "#e0e0e0"
-		currentState.LastUpdate = time.Now()
 		currentState.TTL = time.Now().Add(2 * time.Minute)
 		stateMutex.Unlock()
 		updateFirestore(context.Background())
@@ -210,7 +223,6 @@ func handleAttendee(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if updated {
-			currentState.LastUpdate = time.Now()
 			currentState.TTL = time.Now().Add(2 * time.Minute)
 		}
 		stateMutex.Unlock()
@@ -230,13 +242,16 @@ func sendMetrics(conn *websocket.Conn) error {
 	metricsHTML := fmt.Sprintf(`
 		<div id="metrics" hx-swap-oob="innerHTML">
 			<p>Instance: %s</p>
-			<p>Memory: %d MB</p>
+			<p>Memory: %d MB | CPU: %.1f%%</p>
+			<p>Region: %s</p>
+			<p>Service: %s</p>
+			<p>Revision: %s</p>
 			<p>Status: %s</p>
 		</div>
 		<style id="container-preview-style" hx-swap-oob="innerHTML">
 			#container-preview { background-color: %s; }
 		</style>
-	`, stateCopy.InstanceID, stateCopy.MemoryMB, stateCopy.Status, stateCopy.Color)
+	`, stateCopy.InstanceID, stateCopy.MemoryMB, stateCopy.CPUUtil, stateCopy.Region, stateCopy.ServiceName, stateCopy.RevisionName, stateCopy.Status, stateCopy.Color)
 	metricsHTML = strings.ReplaceAll(metricsHTML, "\n", "")
 	return conn.WriteMessage(websocket.TextMessage, []byte(metricsHTML))
 }
@@ -245,4 +260,52 @@ func getMemoryMB() int64 {
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
 	return int64(m.Alloc / 1024 / 1024)
+}
+
+func getCPUUtil() float64 {
+	contents, err := os.ReadFile("/proc/stat")
+	if err != nil {
+		return 0
+	}
+	lines := strings.Split(string(contents), "\n")
+	for _, line := range lines {
+		fields := strings.Fields(line)
+		if len(fields) > 0 && fields[0] == "cpu" {
+			var user, nice, system, idle, iowait, irq, softirq, steal, guest, guest_nice uint64
+			fmt.Sscanf(line, "cpu %d %d %d %d %d %d %d %d %d %d", &user, &nice, &system, &idle, &iowait, &irq, &softirq, &steal, &guest, &guest_nice)
+			idleTime := idle + iowait
+			totalTime := user + nice + system + idle + iowait + irq + softirq + steal
+
+			if lastTotalCPU > 0 {
+				idleDiff := float64(idleTime - lastIdleCPU)
+				totalDiff := float64(totalTime - lastTotalCPU)
+				util := 100.0 * (1.0 - idleDiff/totalDiff)
+				lastIdleCPU = idleTime
+				lastTotalCPU = totalTime
+				return util
+			}
+			lastIdleCPU = idleTime
+			lastTotalCPU = totalTime
+			return 0
+		}
+	}
+	return 0
+}
+
+func getRegion() string {
+	region := os.Getenv("REGION")
+	if region != "" {
+		return region
+	}
+	client := &http.Client{Timeout: 1 * time.Second}
+	req, _ := http.NewRequest("GET", "http://metadata.google.internal/computeMetadata/v1/instance/region", nil)
+	req.Header.Set("Metadata-Flavor", "Google")
+	resp, err := client.Do(req)
+	if err == nil {
+		defer resp.Body.Close()
+		b, _ := io.ReadAll(resp.Body)
+		parts := strings.Split(string(b), "/")
+		return parts[len(parts)-1]
+	}
+	return "unknown"
 }

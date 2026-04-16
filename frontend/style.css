@@ -96,7 +96,7 @@ body {
 }
 
 .preview-box {
-    height: 150px;
+    min-height: 200px;
     border-radius: 12px;
     display: flex;
     align-items: center;

@@ -171,6 +171,15 @@ service cloud.firestore {
 }
 ```
 
+### Firestore TTL Policy
+To automatically clean up stale instances (e.g., if a container crashes and misses its cleanup signal):
+1. Go to [Firestore TTL Settings](https://console.cloud.google.com/firestore/databases/-default-/settings).
+2. Click **Enable TTL**.
+3. Select the collection: `active_containers`.
+4. Select the timestamp field: `ttl`.
+5. Click **Enable**.
+*Note: It can take up to 72 hours for the initial cleanup to begin after enabling the policy.*
+
 ### Presentation Frontend
 Update the `projectId` in `frontend/presentation.html` to match your project if it was hardcoded during development.
 
