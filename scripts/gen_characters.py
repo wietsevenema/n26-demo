@@ -132,6 +132,6 @@ def generate_unique_names(target_count=1000):
 
 if __name__ == "__main__":
     results = generate_unique_names(1000)
-    with open('character_ideas.json', 'w') as f:
+    with open('backend/instance-ids.json', 'w') as f:
         json.dump(results, f, indent=2)
-    print("character_ideas.json written successfully.")
+    print("backend/instance-ids.json written successfully.")
