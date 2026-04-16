@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cloud Next Demo - Live Visualization</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
@@ -18,9 +21,7 @@
         const containerGrid = document.getElementById("container-grid");
 
         const instanceToSlot = new Map();
-        // Array of slot elements that are currently empty
-        const availableSlots = [];
-        let totalActive = 0;
+        let availableSlots = [];
 
         function createSlot() {
             const slot = document.createElement("div");
@@ -30,28 +31,42 @@
         }
 
         function updateGridLayout() {
-            const activeCount = instanceToSlot.size;
             const slotCount = containerGrid.children.length;
+            if (slotCount === 0) return;
 
-            // Target a 16:9 aspect ratio for the grid cells
-            const aspectRatio = 16 / 9;
-            
-            // Calculate optimal columns and rows for the current total slots
-            let cols = Math.ceil(Math.sqrt(slotCount * aspectRatio));
-            let rows = Math.ceil(slotCount / cols);
+            const vWidth = window.innerWidth;
+            const vHeight = window.innerHeight;
+            const viewportAspect = vWidth / vHeight;
 
-            // Ensure a minimum grid size for aesthetics (10x6)
-            const minCols = 10;
-            const minRows = 6;
+            const idealCols = Math.sqrt(slotCount * viewportAspect);
+            const options = [Math.floor(idealCols), Math.ceil(idealCols)].filter(c => c > 0);
             
-            const finalCols = Math.max(minCols, cols);
-            const finalRows = Math.max(minRows, rows);
+            let bestCols = options[0] || 10;
+            let minDiff = Infinity;
+
+            options.forEach(cols => {
+                const rows = Math.ceil(slotCount / cols);
+                const cellAspect = (vWidth / cols) / (vHeight / rows);
+                const diff = Math.abs(1 - cellAspect);
+                
+                if (diff < minDiff - 0.01) {
+                    minDiff = diff;
+                    bestCols = cols;
+                } else if (Math.abs(diff - minDiff) < 0.01 && cellAspect > 1) {
+                    bestCols = cols;
+                }
+            });
+
+            const finalCols = bestCols;
+            const finalRows = Math.ceil(slotCount / finalCols);
 
             containerGrid.style.setProperty('--cols', finalCols);
             containerGrid.style.setProperty('--rows', finalRows);
         }
 
-        // Initialize with minimum slots (10x6 = 60)
+        window.addEventListener('resize', updateGridLayout);
+
+        // Initialize baseline
         for (let i = 0; i < 60; i++) {
             availableSlots.push(createSlot());
         }
@@ -64,39 +79,61 @@
                 const id = change.doc.id;
 
                 if (change.type === "added") {
-                    totalActive++;
                     let slot;
                     if (availableSlots.length > 0) {
-                        slot = availableSlots.shift();
+                        slot = availableSlots.shift(); // Fill holes first
                         slot.classList.remove("empty");
                     } else {
                         slot = createSlot();
                         slot.classList.remove("empty");
+                        updateGridLayout(); // Only change grid if we added a new physical slot
                     }
-                    
                     instanceToSlot.set(id, slot);
                     updateSlot(slot, data, true);
-                    updateGridLayout();
                 }
                 
                 if (change.type === "modified") {
                     const slot = instanceToSlot.get(id);
-                    if (slot) {
-                        updateSlot(slot, data, false);
-                    }
+                    if (slot) updateSlot(slot, data, false);
                 }
                 
                 if (change.type === "removed") {
-                    totalActive--;
                     const slot = instanceToSlot.get(id);
                     if (slot) {
                         clearSlot(slot);
                         instanceToSlot.delete(id);
-                        availableSlots.push(slot);
+                        availableSlots.push(slot); // Make it available for reuse
                     }
                 }
             });
         });
+
+        // 1-Minute Reflow: The critical "Cleaning" interval
+        setInterval(() => {
+            const totalSlots = containerGrid.children.length;
+            const emptyCount = availableSlots.length;
+            
+            // Only reflow if > 60 slots AND significant occupancy drop
+            if (totalSlots > 60 && (emptyCount / totalSlots) >= 0.25) {
+                console.log("Reflowing grid: Compacting layout and purging surplus slots.");
+                
+                // 1. Collect active slots in order
+                const activeSlots = Array.from(containerGrid.children).filter(s => !s.classList.contains('empty'));
+                
+                // 2. Clear grid and re-append active ones
+                containerGrid.innerHTML = "";
+                activeSlots.forEach(s => containerGrid.appendChild(s));
+                
+                // 3. Fill with baseline empty slots
+                availableSlots = [];
+                const targetTotal = Math.max(60, activeSlots.length);
+                while (containerGrid.children.length < targetTotal) {
+                    availableSlots.push(createSlot());
+                }
+                
+                updateGridLayout();
+            }
+        }, 60000);
 
         function updateSlot(slot, data, isNew) {
             const statusClass = data.status === 'idle' ? 'status-idle' : 'status-connected';
@@ -106,8 +143,8 @@
             if (isNew) slot.classList.add("pop-in");
             
             slot.innerHTML = `
-                <div class="emoji">${data.emoji}</div>
                 <div class="instance-id">${data.instance_id}</div>
+                <div class="emoji">${data.emoji}</div>
             `;
             
             if (isNew) {
@@ -121,32 +158,11 @@
                 slot.innerHTML = "";
                 slot.style.backgroundColor = "transparent";
                 slot.className = "container-box empty";
-                // Reset styles that might have been set by the exit class
                 slot.style.opacity = "";
                 slot.style.transform = "";
                 slot.style.filter = "";
             }, 500);
         }
-
-        // Periodic reflow: clean up empty slots every minute, but only if > 25% are empty
-        setInterval(() => {
-            const totalSlots = containerGrid.children.length;
-            if (totalSlots === 0) return;
-            
-            const emptyCount = availableSlots.length;
-            const emptyRatio = emptyCount / totalSlots;
-
-            if (emptyRatio >= 0.25) {
-                console.log(`Reflowing grid: ${Math.round(emptyRatio * 100)}% empty slots found.`);
-                while (availableSlots.length > 0) {
-                    const slot = availableSlots.shift();
-                    if (slot.parentNode === containerGrid) {
-                        slot.remove();
-                    }
-                }
-                updateGridLayout();
-            }
-        }, 60000);
     </script>
 </head>
 <body class="presentation">

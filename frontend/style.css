@@ -39,8 +39,9 @@ body {
 }
 
 .container-box {
+    container-type: inline-size; /* Enable container queries */
     background-color: white;
-    border-radius: 4px; /* Sharper corners for small boxes */
+    border-radius: 4px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -50,7 +51,7 @@ body {
     transition: all 0.3s ease;
     position: relative;
     overflow: hidden;
-    padding: 1px;
+    padding: 0;
 }
 
 .container-box.empty {
@@ -61,24 +62,31 @@ body {
 
 /* Highly responsive font sizes */
 .container-box .emoji {
-    font-size: min(3.5vh, 3.5vw);
+    font-size: 40cqw; /* Adapt emoji to container width */
     line-height: 1;
-    color: white; /* Default to white for connected states */
+    color: white; 
+    margin-top: 10cqw; /* Spacing based on container size */
 }
 
 .status-idle .emoji, .status-idle .instance-id {
-    color: #202124 !important; /* High-contrast black for idle state */
+    color: #202124 !important;
 }
 
 .container-box .instance-id {
-    font-size: min(1vh, 1vw);
-    font-weight: 500;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background-color: rgba(0,0,0,0.08);
+    padding: 2cqw 0;
+    text-align: center;
+    font-size: 12.5cqw; /* Aggressive scaling to fill width */
+    font-weight: 400;
     color: white; 
-    font-family: monospace;
+    font-family: 'Press Start 2P', system-ui;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 90%;
 }
 
 .container-box.pop-in {
