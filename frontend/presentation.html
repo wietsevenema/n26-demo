@@ -17,7 +17,6 @@
         const db = getFirestore(app);
         const containerGrid = document.getElementById("container-grid");
 
-        // Map to track which instance is in which slot (DOM element)
         const instanceToSlot = new Map();
         // Array of slot elements that are currently empty
         const availableSlots = [];
@@ -31,18 +30,32 @@
         }
 
         function updateGridLayout() {
-            // Count total slots (active + empty placeholders) to maintain grid stability
+            const activeCount = instanceToSlot.size;
             const slotCount = containerGrid.children.length;
-            if (slotCount === 0) return;
 
             // Target a 16:9 aspect ratio for the grid cells
             const aspectRatio = 16 / 9;
-            const cols = Math.ceil(Math.sqrt(slotCount * aspectRatio));
             
-            // Limit minimum columns for better aesthetics at low counts
-            const finalCols = Math.max(8, cols);
+            // Calculate optimal columns and rows for the current total slots
+            let cols = Math.ceil(Math.sqrt(slotCount * aspectRatio));
+            let rows = Math.ceil(slotCount / cols);
+
+            // Ensure a minimum grid size for aesthetics (10x6)
+            const minCols = 10;
+            const minRows = 6;
+            
+            const finalCols = Math.max(minCols, cols);
+            const finalRows = Math.max(minRows, rows);
+
             containerGrid.style.setProperty('--cols', finalCols);
+            containerGrid.style.setProperty('--rows', finalRows);
         }
+
+        // Initialize with minimum slots (10x6 = 60)
+        for (let i = 0; i < 60; i++) {
+            availableSlots.push(createSlot());
+        }
+        updateGridLayout();
 
         // Listen to Firestore real-time updates
         onSnapshot(collection(db, "active_containers"), (snapshot) => {
@@ -59,11 +72,11 @@
                     } else {
                         slot = createSlot();
                         slot.classList.remove("empty");
-                        updateGridLayout(); // Re-calculate when new slots are created
                     }
                     
                     instanceToSlot.set(id, slot);
                     updateSlot(slot, data, true);
+                    updateGridLayout();
                 }
                 
                 if (change.type === "modified") {
@@ -80,8 +93,6 @@
                         clearSlot(slot);
                         instanceToSlot.delete(id);
                         availableSlots.push(slot);
-                        // We don't shrink the grid immediately to avoid shifting,
-                        // but we could if availableSlots becomes very large.
                     }
                 }
             });
