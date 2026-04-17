@@ -53,7 +53,8 @@ gcloud artifacts repositories create cloud-run-demo \
 ```
 
 ### Build and Push Image
-Build the image locally (faster) and push it:
+Build the image locally and push it. A local build is **always faster** than Google Cloud Build, as the latter does not cache layers between builds.
+
 ```bash
 # Authenticate Docker
 gcloud auth configure-docker ${REGION}-docker.pkg.dev
@@ -67,10 +68,9 @@ docker push ${REGION}-docker.pkg.dev/${PROJECT_ID}/cloud-run-demo/backend
 cd ..
 ```
 
-### Deploy Cloud Run Services
-We deploy the same code to two services with different configurations:
+### Deploy Cloud Run Service
 
-**1. Attendee Backend (Isolated instances)**
+**Attendee Backend (Isolated instances)**
 ```bash
 gcloud run deploy attendee-backend \
     --image ${REGION}-docker.pkg.dev/${PROJECT_ID}/cloud-run-demo/backend \
@@ -81,15 +81,6 @@ gcloud run deploy attendee-backend \
     --allow-unauthenticated \
     --region $REGION \
     --max-instances 1000
-```
-
-**2. Presentation Backend (Dashboard SSE stream)**
-```bash
-gcloud run deploy presentation-backend \
-    --image ${REGION}-docker.pkg.dev/${PROJECT_ID}/cloud-run-demo/backend \
-    --allow-unauthenticated \
-    --region $REGION \
-    --max-instances 10
 ```
 
 ---
@@ -122,21 +113,14 @@ gcloud storage cp frontend/* gs://$BUCKET_NAME/
 
 ### Create NEGs and Backend Services
 ```bash
-# NEGs
+# NEG
 gcloud compute network-endpoint-groups create attendee-neg \
     --region=$REGION --network-endpoint-type=serverless --cloud-run-service=attendee-backend
 
-gcloud compute network-endpoint-groups create presentation-neg \
-    --region=$REGION --network-endpoint-type=serverless --cloud-run-service=presentation-backend
-
-# Backend Services
+# Backend Service
 gcloud compute backend-services create attendee-backend-service --global --load-balancing-scheme=EXTERNAL_MANAGED
 gcloud compute backend-services add-backend attendee-backend-service --global \
     --network-endpoint-group=attendee-neg --network-endpoint-group-region=$REGION
-
-gcloud compute backend-services create presentation-backend-service --global --load-balancing-scheme=EXTERNAL_MANAGED
-gcloud compute backend-services add-backend presentation-backend-service --global \
-    --network-endpoint-group=presentation-neg --network-endpoint-group-region=$REGION
 
 # Backend Bucket (CDN)
 gcloud compute backend-buckets create demo-backend-bucket --gcs-bucket-name=$BUCKET_NAME --enable-cdn
@@ -157,7 +141,7 @@ gcloud compute url-maps add-path-matcher demo-url-map \
     --default-backend-bucket=demo-backend-bucket \
     --path-matcher-name=backend-matcher \
     --new-hosts="*" \
-    --backend-service-path-rules="/ws=attendee-backend-service,/presentation=presentation-backend-service"
+    --backend-service-path-rules="/ws=attendee-backend-service"
 
 # SSL Certificate (Google-managed)
 gcloud compute ssl-certificates create demo-ssl-cert --domains="$DOMAIN" --global
@@ -215,6 +199,7 @@ firebase deploy --only firestore:rules --project $PROJECT_ID
 Since native Firestore TTL is slow, we use a dedicated internal service for 1-minute cleanup:
 
 1. **Build and Deploy Cleanup Service:**
+   Local builds are **always faster** than Google Cloud Build, as the latter does not cache layers.
    ```bash
    cd cleanup
    docker build --platform linux/amd64 -t ${REGION}-docker.pkg.dev/${PROJECT_ID}/cloud-run-demo/cleanup .

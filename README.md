@@ -30,7 +30,9 @@ An interactive, real-time visualization of Cloud Run's serverless scalability. T
 - Python 3.12+ (with `uv`) for simulation.
 
 ### 2. Deployment
-Follow the detailed **[Project Setup (DEPLOY.md)](./DEPLOY.md)** for initial infrastructure provisioning. Once provisioning is complete, use the `Makefile` for streamlined updates:
+Follow the detailed **[Project Setup (DEPLOY.md)](./DEPLOY.md)** for initial infrastructure provisioning. Once provisioning is complete, use the `Makefile` for streamlined updates. 
+
+**Note:** Local builds are **always faster** than Google Cloud Build, as the latter does not cache layers between builds.
 
 ```bash
 # Update everything

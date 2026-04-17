@@ -25,10 +25,6 @@ backend:
 		--image $(REGION)-docker.pkg.dev/$(PROJECT_ID)/cloud-run-demo/backend \
 		--service-account="attendee-sa@$(PROJECT_ID).iam.gserviceaccount.com" \
 		--region $(REGION) --quiet
-	gcloud run deploy presentation-backend \
-		--image $(REGION)-docker.pkg.dev/$(PROJECT_ID)/cloud-run-demo/backend \
-		--service-account="presentation-sa@$(PROJECT_ID).iam.gserviceaccount.com" \
-		--region $(REGION) --quiet
 
 frontend:
 	@echo "$(BLUE)Preparing and uploading frontend assets...$(NC)"
