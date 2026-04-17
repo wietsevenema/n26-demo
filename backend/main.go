@@ -10,6 +10,7 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
 	"runtime"
 	"strconv"
@@ -300,6 +301,7 @@ func sendMetrics(conn *websocket.Conn) error {
 	`, statusClass, stateCopy.Color, stateCopy.InstanceID, stateCopy.Emoji)
 
 	// 2. The Terminal Readout (Shell Style)
+	psAux := getPsAux()
 	readoutHTML := fmt.Sprintf(`
 		<div id="system-readout" class="terminal-box" hx-swap-oob="innerHTML">
 			<div class="terminal-line"><span class="prompt">$</span> env | grep K_</div>
@@ -311,11 +313,13 @@ func sendMetrics(conn *websocket.Conn) error {
 			<div class="terminal-line">Mem: %s</div>
 			<div class="terminal-line"><span class="prompt">$</span> cat /proc/stat | grep cpu</div>
 			<div class="terminal-line">cpu usage: %.2f%%</div>
+			<div class="terminal-line"><span class="prompt">$</span> ps aux</div>
+			<div class="terminal-line" style="font-size: 0.7rem; opacity: 0.8; white-space: pre;">%s</div>
 			<div class="terminal-line"><span class="prompt">$</span> echo $STATE</div>
 			<div class="terminal-line">%s</div>
 			<script>if(window.updateSelectionVisuals) updateSelectionVisuals("%s", "%s");</script>
 		</div>
-	`, stateCopy.ServiceName, stateCopy.RevisionName, stateCopy.Region, memoryDisplay, stateCopy.CPUUtil, stateCopy.Status, stateCopy.Emoji, stateCopy.Color)
+	`, stateCopy.ServiceName, stateCopy.RevisionName, stateCopy.Region, memoryDisplay, stateCopy.CPUUtil, psAux, stateCopy.Status, stateCopy.Emoji, stateCopy.Color)
 
 	fullHTML := strings.ReplaceAll(previewHTML+readoutHTML, "\n", "")
 	return conn.WriteMessage(websocket.TextMessage, []byte(fullHTML))
@@ -392,4 +396,12 @@ func getRegion() string {
 		return parts[len(parts)-1]
 	}
 	return "unknown"
+}
+
+func getPsAux() string {
+	out, err := exec.Command("ps", "aux").Output()
+	if err != nil {
+		return fmt.Sprintf("Error running ps aux: %v", err)
+	}
+	return string(out)
 }
