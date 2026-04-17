@@ -74,6 +74,9 @@ We deploy the same code to two services with different configurations:
 gcloud run deploy attendee-backend \
     --image ${REGION}-docker.pkg.dev/${PROJECT_ID}/cloud-run-demo/backend \
     --concurrency 1 \
+    --cpu 0.08 \
+    --memory 128Mi \
+    --timeout 900 \
     --allow-unauthenticated \
     --region $REGION \
     --max-instances 1000
