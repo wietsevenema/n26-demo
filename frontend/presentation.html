@@ -6,14 +6,14 @@
     <title>Cloud Next Demo - Live Visualization</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inconsolata:wght@200..900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
-            projectId: "venema-2026-1",
+            projectId: "venema-next-2026-demo",
         };
 
         const app = initializeApp(firebaseConfig);
@@ -74,6 +74,16 @@
 
         // Listen to Firestore real-time updates
         onSnapshot(collection(db, "active_containers"), (snapshot) => {
+            // Update the live counters
+            let idleCount = 0;
+            snapshot.docs.forEach(doc => {
+                if (doc.data().status === 'idle') idleCount++;
+            });
+            const activeCount = snapshot.size - idleCount;
+            
+            document.getElementById("active-counter").innerText = activeCount;
+            document.getElementById("idle-counter").innerText = idleCount;
+
             snapshot.docChanges().forEach((change) => {
                 const data = change.doc.data();
                 const id = change.doc.id;
@@ -169,6 +179,22 @@
     </script>
 </head>
 <body class="presentation">
+    <header class="dashboard-header">
+        <div class="header-left">
+            <h1 class="main-title">Real-time Cloud Run instances</h1>
+            <p class="sub-title">One instance per attendee.</p>
+        </div>
+        <div class="header-right">
+            <div class="counter-group">
+                <div class="counter-label">Active</div>
+                <div id="active-counter" class="counter-value">0</div>
+            </div>
+            <div class="counter-group">
+                <div class="counter-label">Idle</div>
+                <div id="idle-counter" class="counter-value idle-value">0</div>
+            </div>
+        </div>
+    </header>
     <main>
         <div id="container-grid" class="grid">
             <!-- Slots will be injected and managed here -->
