@@ -10,7 +10,7 @@ import time
 from datetime import datetime, timedelta, timezone
 from google.cloud import firestore
 
-PROJECT_ID = "venema-2026-1"
+PROJECT_ID = os.getenv("GOOGLE_CLOUD_PROJECT")
 TEST_ID = "test-zombie-999"
 
 def run_test():

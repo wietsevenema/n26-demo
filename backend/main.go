@@ -31,7 +31,7 @@ type NameRecord struct {
 }
 
 var (
-	projectID  = "venema-2026-1"
+	projectID  = ""
 	instanceID = ""
 	upgrader   = websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool { return true },
@@ -79,10 +79,18 @@ func main() {
 	// Pick a random ID from the list
 	instanceID = names[rand.Intn(len(names))].Name
 
+	// Try to get project ID from environment, then metadata server, then fallback
 	envProjectID := os.Getenv("GOOGLE_CLOUD_PROJECT")
 	if envProjectID != "" {
 		projectID = envProjectID
+	} else {
+		metadataProjectID := getProjectID()
+		if metadataProjectID != "" {
+			projectID = metadataProjectID
+		}
 	}
+
+	log.Printf("Using Project ID: %s", projectID)
 
 	firestoreClient, err = firestore.NewClient(ctx, projectID)
 	if err != nil {
@@ -302,6 +310,7 @@ func sendMetrics(conn *websocket.Conn) error {
 
 	// 2. The Terminal Readout (Shell Style)
 	psAux := getPsAux()
+	uptimeVal := getUptime()
 	readoutHTML := fmt.Sprintf(`
 		<div id="system-readout" class="terminal-box" hx-swap-oob="innerHTML">
 			<div class="terminal-line"><span class="prompt">$</span> env | grep K_</div>
@@ -311,18 +320,17 @@ func sendMetrics(conn *websocket.Conn) error {
 			<div class="terminal-line">%s</div>
 			<div class="terminal-line"><span class="prompt">$</span> free -m | grep Mem</div>
 			<div class="terminal-line">Mem: %s</div>
+			<div class="terminal-line"><span class="prompt">$</span> uptime</div>
+			<div class="terminal-line">%s</div>
 			<div class="terminal-line"><span class="prompt">$</span> cat /proc/stat | grep cpu</div>
 			<div class="terminal-line">cpu usage: %.2f%%</div>
 			<div class="terminal-line"><span class="prompt">$</span> ps aux</div>
-			<div class="terminal-line" style="font-size: 0.7rem; opacity: 0.8; white-space: pre;">%s</div>
-			<div class="terminal-line"><span class="prompt">$</span> echo $STATE</div>
-			<div class="terminal-line">%s</div>
+			<pre style="font-family: 'Inconsolata', monospace; font-size: 0.7rem; color: #A8DAB5; margin: 0; white-space: pre; overflow-x: auto;">%s</pre>
 			<script>if(window.updateSelectionVisuals) updateSelectionVisuals("%s", "%s");</script>
 		</div>
-	`, stateCopy.ServiceName, stateCopy.RevisionName, stateCopy.Region, memoryDisplay, stateCopy.CPUUtil, psAux, stateCopy.Status, stateCopy.Emoji, stateCopy.Color)
+	`, stateCopy.ServiceName, stateCopy.RevisionName, stateCopy.Region, memoryDisplay, uptimeVal, stateCopy.CPUUtil, psAux, stateCopy.Emoji, stateCopy.Color)
 
-	fullHTML := strings.ReplaceAll(previewHTML+readoutHTML, "\n", "")
-	return conn.WriteMessage(websocket.TextMessage, []byte(fullHTML))
+	return conn.WriteMessage(websocket.TextMessage, []byte(previewHTML+readoutHTML))
 }
 
 func getMemoryMB() int64 {
@@ -380,6 +388,19 @@ func getCPUUtil() float64 {
 	return 0
 }
 
+func getProjectID() string {
+	client := &http.Client{Timeout: 1 * time.Second}
+	req, _ := http.NewRequest("GET", "http://metadata.google.internal/computeMetadata/v1/project/project-id", nil)
+	req.Header.Set("Metadata-Flavor", "Google")
+	resp, err := client.Do(req)
+	if err == nil {
+		defer resp.Body.Close()
+		b, _ := io.ReadAll(resp.Body)
+		return strings.TrimSpace(string(b))
+	}
+	return ""
+}
+
 func getRegion() string {
 	region := os.Getenv("REGION")
 	if region != "" {
@@ -399,9 +420,18 @@ func getRegion() string {
 }
 
 func getPsAux() string {
-	out, err := exec.Command("ps", "aux").Output()
+	// Filter out TTY and VSZ columns by specifying output columns manually
+	out, err := exec.Command("ps", "axo", "user,pid,pcpu,pmem,rss,stat,start,time,command").Output()
 	if err != nil {
-		return fmt.Sprintf("Error running ps aux: %v", err)
+		return fmt.Sprintf("Error running ps: %v", err)
 	}
 	return string(out)
+}
+
+func getUptime() string {
+	out, err := exec.Command("uptime").Output()
+	if err != nil {
+		return fmt.Sprintf("Error running uptime: %v", err)
+	}
+	return strings.TrimSpace(string(out))
 }

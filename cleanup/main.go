@@ -3,9 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"cloud.google.com/go/firestore"
@@ -13,12 +15,17 @@ import (
 )
 
 var (
-	projectID = "venema-2026-1"
+	projectID = ""
 )
 
 func main() {
 	if envProjectID := os.Getenv("GOOGLE_CLOUD_PROJECT"); envProjectID != "" {
 		projectID = envProjectID
+	} else {
+		metadataProjectID := getProjectID()
+		if metadataProjectID != "" {
+			projectID = metadataProjectID
+		}
 	}
 
 	// Register multiple patterns to be safe
@@ -30,7 +37,7 @@ func main() {
 		port = "8080"
 	}
 
-	log.Printf("Cleanup service starting on port %s...", port)
+	log.Printf("Cleanup service starting on port %s for project %s...", port, projectID)
 	if err := http.ListenAndServe(":"+port, nil); err != nil {
 		log.Fatalf("Server failed: %v", err)
 	}
@@ -89,4 +96,17 @@ func handleSweep(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Sweep completed. Cleaned up %d zombie containers.", count)
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, "Cleaned up %d containers", count)
+}
+
+func getProjectID() string {
+	client := &http.Client{Timeout: 1 * time.Second}
+	req, _ := http.NewRequest("GET", "http://metadata.google.internal/computeMetadata/v1/project/project-id", nil)
+	req.Header.Set("Metadata-Flavor", "Google")
+	resp, err := client.Do(req)
+	if err == nil {
+		defer resp.Body.Close()
+		b, _ := io.ReadAll(resp.Body)
+		return strings.TrimSpace(string(b))
+	}
+	return ""
 }

@@ -10,7 +10,7 @@ from google.cloud import firestore
 from datetime import datetime, timezone
 
 def debug_ttl():
-    db = firestore.Client(project="venema-2026-1")
+    db = firestore.Client(project=os.getenv("GOOGLE_CLOUD_PROJECT"))
     collection_ref = db.collection("active_containers")
     
     docs = list(collection_ref.stream())
