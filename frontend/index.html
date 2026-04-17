@@ -6,36 +6,41 @@
     <title>Cloud Run Instance - Attendee</title>
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <script src="https://unpkg.com/htmx.org/dist/ext/ws.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inconsolata:wght@200..900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
-    <style id="container-preview-style"></style>
+    <script src="connection.js"></script>
 </head>
 <body>
     <div class="container" id="main-container">
         <div id="setup-view">
-            <h1>Cloud Run Demo</h1>
-            <p style="text-align: center; margin-bottom: 2rem; color: #70757a;">
-                Each connection spins up a dedicated container instance with 
-                <strong>concurrency=1</strong>.
+            <h1 class="retro-header">Cloud Run Demo</h1>
+            <p class="intro-text">
+                Spin up a dedicated, isolated container instance on Google Cloud.
             </p>
-            <button class="start-btn" 
-                    onclick="startContainer()">
-                Start Container Instance
+            <button class="start-btn" onclick="startContainer()">
+                START INSTANCE
             </button>
         </div>
 
-        <!-- The active view is hidden and HAS NO WS ATTRIBUTES initially -->
         <div id="active-view" style="display:none;">
-            <h1>Your Container</h1>
+            <h1 class="retro-header">Instance Control</h1>
             
-            <div id="container-preview" class="preview-box">
-                <div id="metrics">
-                    <p>Spinning up instance...</p>
+            <!-- Section 2: Live Preview (1:1 with dashboard) -->
+            <div id="preview-wrapper">
+                <div id="pulse-indicator" class="pulse-dot"></div>
+                <div id="container-preview">
+                    <!-- Status message shown before backend injects the real .container-box -->
+                    <div id="connection-status" class="status-placeholder">Initializing terminal...</div>
                 </div>
             </div>
 
-            <div class="controls">
+            <!-- Section 3: Customizations -->
+            <div class="section-label">Customization</div>
+            <div class="controls" onclick="handleSelection(event)">
                 <div class="control-group">
-                    <label>Change Emoji:</label>
+                    <label>Emoji</label>
                     <div class="emoji-grid">
                         <button ws-send name="emoji" value="🐶">🐶</button>
                         <button ws-send name="emoji" value="🐱">🐱</button>
@@ -43,16 +48,14 @@
                         <button ws-send name="emoji" value="🦊">🦊</button>
                         <button ws-send name="emoji" value="🐻">🐻</button>
                         <button ws-send name="emoji" value="🐼">🐼</button>
-                        <button ws-send name="emoji" value="🦁">🦁</button>
-                        <button ws-send name="emoji" value="🐮">🐮</button>
-                        <button ws-send name="emoji" value="🐷">🐷</button>
-                        <button ws-send name="emoji" value="🐸">🐸</button>
+                        <button ws-send name="emoji" value="🦀">🦀</button>
                         <button ws-send name="emoji" value="🐵">🐵</button>
                         <button ws-send name="emoji" value="🦄">🦄</button>
+                        <button ws-send name="emoji" value="🦋">🦋</button>
                     </div>
                 </div>
                 <div class="control-group">
-                    <label>Change Color:</label>
+                    <label>Background color</label>
                     <div class="color-grid">
                         <button ws-send name="color" value="#1967D2" style="background-color: #1967D2;"></button>
                         <button ws-send name="color" value="#C5221F" style="background-color: #C5221F;"></button>
@@ -61,22 +64,14 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Section 4: System Readout -->
+            <div class="section-label">System Readout</div>
+            <div id="system-readout" class="terminal-box">
+                <!-- Injected by backend as terminal lines -->
+                <div class="terminal-line">Initializing...</div>
+            </div>
         </div>
     </div>
-
-    <script>
-        function startContainer() {
-            document.getElementById('setup-view').style.display = 'none';
-            const activeView = document.getElementById('active-view');
-            activeView.style.display = 'block';
-            
-            // Add HTMX attributes dynamically
-            activeView.setAttribute('hx-ext', 'ws');
-            activeView.setAttribute('ws-connect', '/ws');
-            
-            // Trigger HTMX to process the new attributes and open the connection
-            htmx.process(activeView);
-        }
-    </script>
 </body>
 </html>

@@ -3,21 +3,81 @@
     padding: 0;
     box-sizing: border-box;
 }
-
 body {
     font-family: 'Google Sans', Arial, sans-serif;
     background-color: #f8f9fa;
     color: #202124;
-    height: 100vh;
+    min-height: 100vh;
     display: flex;
     flex-direction: column;
-    overflow: hidden; 
 }
 
 /* Presentation Screen Layout */
 .presentation {
     display: flex;
     flex-direction: column;
+    background-color: #f1f3f4; /* Slightly different bg for dashboard */
+}
+
+.dashboard-header {
+    background: white;
+    padding: 1.5rem 2.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    z-index: 100;
+}
+
+.main-title {
+    font-family: 'Press Start 2P', system-ui;
+    font-size: 1.4rem;
+    font-weight: 400;
+    color: #1a73e8;
+    margin-bottom: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: -1px;
+}
+
+.sub-title {
+    font-family: 'Inconsolata', monospace;
+    font-size: 1.2rem;
+    color: #5f6368;
+    margin-top: 0.2rem;
+    font-weight: 400;
+}
+
+.header-right {
+    display: flex;
+    gap: 3rem;
+    align-items: flex-end;
+}
+
+.counter-group {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.counter-label {
+    font-family: 'Inconsolata', monospace;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    color: #70757a;
+    font-weight: 600;
+    margin-bottom: 0.4rem;
+}
+
+.counter-value {
+    font-family: 'Press Start 2P', system-ui;
+    font-size: 2.2rem;
+    color: #34a853; /* Success green for Active */
+    text-shadow: 0 0 15px rgba(52, 168, 83, 0.2);
+}
+
+.idle-value {
+    color: #5f6368; /* Neutral grey for Idle */
+    text-shadow: none;
 }
 
 .presentation main {
@@ -98,30 +158,138 @@ body {
     to { transform: scale(1); opacity: 1; }
 }
 
-/* Attendee Screen */
-.container {
-    max-width: 500px;
-    margin: 2rem auto;
-    padding: 2rem;
-    background-color: white;
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+/* Common Styles */
+.retro-header {
+    font-family: 'Press Start 2P', system-ui;
+    font-size: 1.2rem;
+    color: #1a73e8;
+    text-align: center;
+    margin-bottom: 2rem;
+    text-transform: uppercase;
 }
 
-.preview-box {
-    min-height: 200px;
+.section-label {
+    font-family: 'Inconsolata', monospace;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #70757a;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid #e8eaed;
+    padding-bottom: 0.4rem;
+    margin-top: 1.5rem;
+}
+
+/* Attendee Screen Customizations */
+.intro-text {
+    font-family: 'Inconsolata', monospace;
+    text-align: center;
+    margin-bottom: 2.5rem;
+    color: #5f6368;
+    font-size: 1.1rem;
+    line-height: 1.5;
+}
+
+.status-panel {
+    font-family: 'Inconsolata', monospace;
+    padding: 0.8rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    text-align: center;
+    font-weight: 600;
+}
+
+#preview-wrapper {
+    background: #f8f9fa;
+    padding: 2.5rem;
     border-radius: 12px;
+    margin-bottom: 1rem;
+    border: 1px solid #e8eaed;
     display: flex;
-    align-items: center;
     justify-content: center;
-    margin-bottom: 2rem;
-    border: 1px solid #dadce0;
+    align-items: center;
+    position: relative;
+    min-height: 220px; /* Exact height to prevent jump when 150px box arrives */
+}
+
+.pulse-dot {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: #5f6368; /* Default grey */
+    transition: background-color 0.3s ease;
+}
+
+.pulse-dot.connected {
+    background-color: #34a853;
+    box-shadow: 0 0 8px #34a853;
+    animation: pulse-glow 2s infinite;
+}
+
+.pulse-dot.connecting {
+    background-color: #f29900;
+    animation: pulse-glow 1s infinite;
+}
+
+.pulse-dot.error {
+    background-color: #c5221f;
+    box-shadow: 0 0 8px #c5221f;
+}
+
+@keyframes pulse-glow {
+    0% { transform: scale(0.95); opacity: 0.7; }
+    50% { transform: scale(1.1); opacity: 1; box-shadow: 0 0 12px currentColor; }
+    100% { transform: scale(0.95); opacity: 0.7; }
+}
+
+.status-placeholder {
+    font-family: 'Inconsolata', monospace;
+    font-weight: 600;
+    color: #5f6368;
+    text-transform: uppercase;
+    letter-spacing: 0.05rem;
+}
+
+.terminal-box {
+    background-color: #202124;
+    border-radius: 8px;
+    padding: 1.2rem;
+    color: #e8eaed; /* Light grey output text */
+    font-family: 'Inconsolata', monospace;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
+    min-height: 200px;
+}
+
+.terminal-line {
+    white-space: pre-wrap;
+    margin-bottom: 0.2rem;
+}
+
+.terminal-line .prompt {
+    color: #34a853; /* Success green prompt */
+    margin-right: 0.6rem;
+    font-weight: bold;
+}
+
+.container {
+    max-width: 550px;
+    margin: 2rem auto;
+    padding: 2.5rem;
+    background-color: white;
+    border-radius: 16px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.1);
 }
 
 .controls {
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
+    margin-bottom: 1rem;
 }
 
 .control-group {
@@ -130,28 +298,59 @@ body {
     gap: 0.8rem;
 }
 
+.control-group label {
+    font-family: 'Inconsolata', monospace;
+    font-weight: 700;
+    color: #5f6368;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+}
+
 .emoji-grid, .color-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     gap: 10px;
 }
 
-button {
-    padding: 12px;
+.emoji-grid button, .color-grid button {
+    padding: 10px;
     border: 1px solid #dadce0;
     border-radius: 8px;
     background: white;
     cursor: pointer;
+    font-size: 1.4rem;
+    transition: all 0.2s;
+}
+
+.emoji-grid button:hover, .color-grid button:hover {
+    border-color: #1a73e8;
+    background: #f8f9fa;
+    transform: translateY(-2px);
+}
+
+.emoji-grid button.selected, .color-grid button.selected {
+    border: 3px solid #1a73e8 !important;
+    box-shadow: 0 0 10px rgba(26, 115, 232, 0.3);
+    transform: scale(1.05);
 }
 
 .start-btn {
+    font-family: 'Press Start 2P', system-ui;
     width: 100%;
-    padding: 1.2rem;
+    padding: 1.5rem;
     background-color: #1a73e8;
     color: white;
     border: none;
     border-radius: 8px;
-    font-size: 1.1rem;
-    font-weight: 500;
+    font-size: 1rem;
     cursor: pointer;
+    transition: transform 0.1s, background-color 0.2s;
+}
+
+.start-btn:hover {
+    background-color: #1765cc;
+}
+
+.start-btn:active {
+    transform: scale(0.98);
 }
