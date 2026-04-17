@@ -30,7 +30,18 @@ An interactive, real-time visualization of Cloud Run's serverless scalability. T
 - Python 3.12+ (with `uv`) for simulation.
 
 ### 2. Deployment
-Follow the detailed **[Project Setup (DEPLOY.md)](./DEPLOY.md)** for initial infrastructure provisioning and the **[Component Update Guide (DEPLOYMENT_GUIDE.md)](./DEPLOYMENT_GUIDE.md)** for pushing changes to the backend and frontend.
+Follow the detailed **[Project Setup (DEPLOY.md)](./DEPLOY.md)** for initial infrastructure provisioning. Once provisioning is complete, use the `Makefile` for streamlined updates:
+
+```bash
+# Update everything
+make deploy
+
+# Or update specific components
+make backend
+make frontend
+make cleanup
+make rules-deploy
+```
 
 ### 3. Simulating Attendees
 The project includes a Python script to simulate hundreds of concurrent attendees. It uses the `uv` script runner to manage its own dependencies.
@@ -42,18 +53,18 @@ The project includes a Python script to simulate hundreds of concurrent attendee
 
 **Available Flags:**
 - `--count`: The target number of concurrent attendees to maintain (default: 30).
-- `--url`: The WebSocket endpoint of your deployment (default: `ws://34.160.220.162/ws`).
+- `--url`: The WebSocket endpoint of your deployment (default: `ws://34.110.195.235/ws`).
 
 ### 4. Monitoring & Logs
-You can monitor the live behavior of the container instances (connections, customizations, and terminations) using Cloud Logging.
+You can monitor the live behavior of the container instances (connections, customizations, and terminations) using Cloud Logging. 
 
-**View Live Backend Logs:**
+**View Live Backend Logs (for the latest revision):**
 ```bash
-gcloud logging read "resource.type=cloud_run_revision AND resource.labels.service_name=attendee-backend" --limit 50 --format="table(timestamp,textPayload)" --project venema-2026-1
+make logs
 ```
 
 **Cloud Console:**
-Visit the [Cloud Run Console](https://console.cloud.google.com/run/detail/us-west4/attendee-backend/logs) to view the Logs Explorer with advanced filtering and real-time streaming.
+Visit the Cloud Run Console to view the Logs Explorer with advanced filtering and real-time streaming.
 
 ## Repository Structure
 
