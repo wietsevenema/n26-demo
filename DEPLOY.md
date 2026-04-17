@@ -10,6 +10,7 @@ Set these variables in your terminal to make the commands easier to run:
 PROJECT_ID="your-project-id"
 REGION="us-west4" # Las Vegas
 BUCKET_NAME="${PROJECT_ID}-frontend"
+DOMAIN="n26.wietsevenema.eu" # Optional: For HTTPS setup
 ```
 
 ### Enable APIs
@@ -95,6 +96,9 @@ gcloud run deploy presentation-backend \
 
 ## 3. Frontend Deployment
 
+### Update Project ID
+Update the `projectId` in `frontend/presentation.html` to match your `$PROJECT_ID`.
+
 ### Create and Configure Bucket
 ```bash
 # Create bucket
@@ -114,7 +118,7 @@ gcloud storage cp frontend/* gs://$BUCKET_NAME/
 
 ---
 
-## 4. Global Load Balancer Setup
+## 4. Global Load Balancer & HTTPS Setup
 
 ### Create NEGs and Backend Services
 ```bash
@@ -138,7 +142,12 @@ gcloud compute backend-services add-backend presentation-backend-service --globa
 gcloud compute backend-buckets create demo-backend-bucket --gcs-bucket-name=$BUCKET_NAME --enable-cdn
 ```
 
-### Configure URL Map and Forwarding
+### Reserve Static IP
+```bash
+gcloud compute addresses create demo-ip --global --network-tier=PREMIUM
+```
+
+### Configure Main URL Map (HTTPS)
 ```bash
 # URL Map
 gcloud compute url-maps create demo-url-map --default-backend-bucket=demo-backend-bucket
@@ -150,29 +159,56 @@ gcloud compute url-maps add-path-matcher demo-url-map \
     --new-hosts="*" \
     --backend-service-path-rules="/ws=attendee-backend-service,/presentation=presentation-backend-service"
 
-# Proxy and Forwarding Rule
-gcloud compute target-http-proxies create demo-http-proxy --url-map=demo-url-map
-gcloud compute forwarding-rules create demo-forwarding-rule --global \
-    --target-http-proxy=demo-http-proxy --ports=80 --load-balancing-scheme=EXTERNAL_MANAGED
+# SSL Certificate (Google-managed)
+gcloud compute ssl-certificates create demo-ssl-cert --domains="$DOMAIN" --global
+
+# Target HTTPS Proxy
+gcloud compute target-https-proxies create demo-https-proxy --url-map=demo-url-map --ssl-certificates=demo-ssl-cert
+
+# Forwarding Rule (Port 443)
+gcloud compute forwarding-rules create demo-https-rule --global \
+    --target-https-proxy=demo-https-proxy --ports=443 --load-balancing-scheme=EXTERNAL_MANAGED --address=demo-ip
+```
+
+### Configure HTTP-to-HTTPS Redirect (Port 80)
+```bash
+# Create Redirect URL Map
+cat << EOF > web-map-http.yaml
+kind: compute#urlMap
+name: web-map-http
+defaultUrlRedirect:
+  redirectResponseCode: MOVED_PERMANENTLY_DEFAULT
+  httpsRedirect: True
+EOF
+gcloud compute url-maps import web-map-http --source web-map-http.yaml --global
+
+# Target HTTP Proxy
+gcloud compute target-http-proxies create demo-http-redirect-proxy --url-map=web-map-http
+
+# Forwarding Rule (Port 80)
+gcloud compute forwarding-rules create demo-http-rule --global \
+    --target-http-proxy=demo-http-redirect-proxy --ports=80 --load-balancing-scheme=EXTERNAL_MANAGED --address=demo-ip
 ```
 
 ---
 
-## 5. Manual Configuration (Crucial)
+## 5. Security and Maintenance
 
 ### Firestore Security Rules
-Go to the [Google Cloud Console (Firestore Rules)](https://console.cloud.google.com/firestore/databases/-default-/rules) and apply these rules to allow the dashboard to read data:
+Use the Firebase CLI to deploy rules safely:
 
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /active_containers/{container} {
-      allow read: if true;
-      allow write: if false; 
-    }
+1. Create a `firebase.json`:
+```json
+{
+  "firestore": {
+    "rules": "firestore.rules"
   }
 }
+```
+
+2. Deploy:
+```bash
+firebase deploy --only firestore:rules --project $PROJECT_ID
 ```
 
 ### Fast TTL Cleanup (Cloud Run + Scheduler)
@@ -181,10 +217,10 @@ Since native Firestore TTL is slow, we use a dedicated internal service for 1-mi
 1. **Build and Deploy Cleanup Service:**
    ```bash
    cd cleanup
-   docker build --platform linux/amd64 -t us-west4-docker.pkg.dev/${PROJECT_ID}/cloud-run-demo/cleanup .
-   docker push us-west4-docker.pkg.dev/${PROJECT_ID}/cloud-run-demo/cleanup
+   docker build --platform linux/amd64 -t ${REGION}-docker.pkg.dev/${PROJECT_ID}/cloud-run-demo/cleanup .
+   docker push ${REGION}-docker.pkg.dev/${PROJECT_ID}/cloud-run-demo/cleanup
    gcloud run deploy cleanup-backend \
-       --image us-west4-docker.pkg.dev/${PROJECT_ID}/cloud-run-demo/cleanup \
+       --image ${REGION}-docker.pkg.dev/${PROJECT_ID}/cloud-run-demo/cleanup \
        --region $REGION --no-allow-unauthenticated --ingress internal
    ```
 
@@ -206,16 +242,13 @@ Since native Firestore TTL is slow, we use a dedicated internal service for 1-mi
        --oidc-token-audience="$CLEANUP_URL/"
    ```
 
-### Presentation Frontend
-Update the `projectId` in `frontend/presentation.html` to match your project if it was hardcoded during development.
-
 ---
 
 ## 6. Testing
 
 ### Get Public IP
 ```bash
-gcloud compute forwarding-rules describe demo-forwarding-rule --global --format="value(IPAddress)"
+gcloud compute forwarding-rules describe demo-https-rule --global --format="value(IPAddress)"
 ```
 
 ### Run Simulation
@@ -223,4 +256,4 @@ Install dependencies and run the script:
 ```bash
 uv run simulate_attendees.py
 ```
-Visit `http://<IP_ADDRESS>/presentation.html` to see the results.
+Visit `https://$DOMAIN/presentation.html` to see the results.
