@@ -35,7 +35,7 @@ var (
 	upgrader   = websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool { return true },
 	}
-	animals = []string{"🐶", "🐱", "🐭", "🐹", "🐰", "🦊", "🐻", "🐼", "🐻‍❄️", "🐨", "🐯", "🦁", "🐮", "🐷", "🐸", "🐵", "🦄", "🐝", "🐙"}
+	animals = []string{"🐶", "🐱", "🐭", "🐹", "🐰", "🦊", "🐻", "🐼", "🐻‍❄️", "🐨", "🐯", "🦁", "🐮", "🦀", "🐸", "🐵", "🦄", "🐝", "🐙", "🦋"}
 	colors  = []string{"#1967D2", "#C5221F", "#F29900", "#188038"}
 
 	currentState    *ContainerState
@@ -285,21 +285,40 @@ func sendMetrics(conn *websocket.Conn) error {
 		memoryDisplay = fmt.Sprintf("%d / %d MB", stateCopy.MemoryMB, stateCopy.TotalMemoryMB)
 	}
 
-	metricsHTML := fmt.Sprintf(`
-		<div id="metrics" hx-swap-oob="innerHTML">
-			<p>Instance: %s</p>
-			<p>Memory: %s | CPU: %.1f%%</p>
-			<p>Region: %s</p>
-			<p>Service: %s</p>
-			<p>Revision: %s</p>
-			<p>Status: %s</p>
+	// 1. The Container Preview (1:1 with dashboard)
+	statusClass := "status-connected"
+	if stateCopy.Status == "idle" {
+		statusClass = "status-idle"
+	}
+	previewHTML := fmt.Sprintf(`
+		<div id="container-preview" hx-swap-oob="outerHTML">
+			<div class="container-box %s" style="background-color: %s; width: 150px; height: 150px; position: relative; margin: 0 auto; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+				<div class="instance-id">%s</div>
+				<div class="emoji">%s</div>
+			</div>
 		</div>
-		<style id="container-preview-style" hx-swap-oob="innerHTML">
-			#container-preview { background-color: %s; }
-		</style>
-	`, stateCopy.InstanceID, memoryDisplay, stateCopy.CPUUtil, stateCopy.Region, stateCopy.ServiceName, stateCopy.RevisionName, stateCopy.Status, stateCopy.Color)
-	metricsHTML = strings.ReplaceAll(metricsHTML, "\n", "")
-	return conn.WriteMessage(websocket.TextMessage, []byte(metricsHTML))
+	`, statusClass, stateCopy.Color, stateCopy.InstanceID, stateCopy.Emoji)
+
+	// 2. The Terminal Readout (Shell Style)
+	readoutHTML := fmt.Sprintf(`
+		<div id="system-readout" class="terminal-box" hx-swap-oob="innerHTML">
+			<div class="terminal-line"><span class="prompt">$</span> env | grep K_</div>
+			<div class="terminal-line">K_SERVICE=%s</div>
+			<div class="terminal-line">K_REVISION=%s</div>
+			<div class="terminal-line"><span class="prompt">$</span> curl -s http://metadata/.../region</div>
+			<div class="terminal-line">%s</div>
+			<div class="terminal-line"><span class="prompt">$</span> free -m | grep Mem</div>
+			<div class="terminal-line">Mem: %s</div>
+			<div class="terminal-line"><span class="prompt">$</span> cat /proc/stat | grep cpu</div>
+			<div class="terminal-line">cpu usage: %.2f%%</div>
+			<div class="terminal-line"><span class="prompt">$</span> echo $STATE</div>
+			<div class="terminal-line">%s</div>
+			<script>if(window.updateSelectionVisuals) updateSelectionVisuals("%s", "%s");</script>
+		</div>
+	`, stateCopy.ServiceName, stateCopy.RevisionName, stateCopy.Region, memoryDisplay, stateCopy.CPUUtil, stateCopy.Status, stateCopy.Emoji, stateCopy.Color)
+
+	fullHTML := strings.ReplaceAll(previewHTML+readoutHTML, "\n", "")
+	return conn.WriteMessage(websocket.TextMessage, []byte(fullHTML))
 }
 
 func getMemoryMB() int64 {
