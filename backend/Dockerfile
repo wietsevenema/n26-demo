@@ -9,5 +9,10 @@ FROM debian:bookworm-slim
 RUN set -x && apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     ca-certificates procps && \
     rm -rf /var/lib/apt/lists/*
+
+# Create a non-privileged user
+RUN useradd -m next26
+USER next26
+
 COPY --from=builder /app/server /server
 CMD ["/server"]

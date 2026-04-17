@@ -14,13 +14,29 @@ if (typeof window !== 'undefined') {
     let retryInterval;
 
     window.setConnectionStatus = function(message, type = 'info') {
-        const statusEl = document.getElementById('connection-status');
-        const indicator = document.getElementById('pulse-indicator');
-        
+        let statusEl = document.getElementById('connection-status');
+        let indicator = document.getElementById('pulse-indicator');
+
+        // If the backend replaced container-preview, the status element is gone.
+        // We recreate the original structure to hide the stale container and show the status.
+        if (!statusEl && type !== 'connected') {
+            const previewWrapper = document.getElementById('preview-wrapper');
+            if (previewWrapper) {
+                previewWrapper.innerHTML = `
+                    <div id="pulse-indicator" class="pulse-dot"></div>
+                    <div id="container-preview">
+                        <div id="connection-status" class="status-placeholder">${message}</div>
+                    </div>
+                `;
+                statusEl = document.getElementById('connection-status');
+                indicator = document.getElementById('pulse-indicator');
+            }
+        }
+
         if (statusEl) {
             statusEl.innerHTML = message;
         }
-        
+
         if (indicator) {
             indicator.className = 'pulse-dot'; // Reset
             if (type === 'error') indicator.classList.add('error');
@@ -28,7 +44,6 @@ if (typeof window !== 'undefined') {
             else if (type === 'connected') indicator.classList.add('connected');
         }
     };
-
     window.startContainer = function() {
         document.getElementById('setup-view').style.display = 'none';
         const activeView = document.getElementById('active-view');

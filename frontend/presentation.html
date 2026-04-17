@@ -19,9 +19,15 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const containerGrid = document.getElementById("container-grid");
+        const qrBox = document.getElementById("qr-code-box");
+        const qrImage = document.getElementById("qr-image");
+
+        // Initialize QR code
+        qrImage.src = "qr.png";
 
         const instanceToSlot = new Map();
         let availableSlots = [];
+        let currentQrSpan = 4;
 
         function createSlot() {
             const slot = document.createElement("div");
@@ -30,22 +36,37 @@
             return slot;
         }
 
+        function updateQrSpan(activeCount) {
+            let newSpan = 4;
+            if (activeCount >= 40 && activeCount < 80) newSpan = 3;
+            else if (activeCount >= 80 && activeCount < 150) newSpan = 2;
+            else if (activeCount >= 150) newSpan = 1;
+
+            if (newSpan !== currentQrSpan) {
+                currentQrSpan = newSpan;
+                updateGridLayout();
+            }
+        }
+
         function updateGridLayout() {
             const slotCount = containerGrid.children.length;
             if (slotCount === 0) return;
+
+            // QR code takes S*S cells but is only 1 child
+            const effectiveSlotCount = slotCount - 1 + (currentQrSpan * currentQrSpan);
 
             const vWidth = window.innerWidth;
             const vHeight = window.innerHeight;
             const viewportAspect = vWidth / vHeight;
 
-            const idealCols = Math.sqrt(slotCount * viewportAspect);
+            const idealCols = Math.sqrt(effectiveSlotCount * viewportAspect);
             const options = [Math.floor(idealCols), Math.ceil(idealCols)].filter(c => c > 0);
             
             let bestCols = options[0] || 10;
             let minDiff = Infinity;
 
             options.forEach(cols => {
-                const rows = Math.ceil(slotCount / cols);
+                const rows = Math.ceil(effectiveSlotCount / cols);
                 const cellAspect = (vWidth / cols) / (vHeight / rows);
                 const diff = Math.abs(1 - cellAspect);
                 
@@ -58,10 +79,11 @@
             });
 
             const finalCols = bestCols;
-            const finalRows = Math.ceil(slotCount / finalCols);
+            const finalRows = Math.ceil(effectiveSlotCount / finalCols);
 
             containerGrid.style.setProperty('--cols', finalCols);
             containerGrid.style.setProperty('--rows', finalRows);
+            containerGrid.style.setProperty('--qr-span', currentQrSpan);
         }
 
         window.addEventListener('resize', updateGridLayout);
@@ -83,6 +105,8 @@
             
             document.getElementById("active-counter").innerText = activeCount;
             document.getElementById("idle-counter").innerText = idleCount;
+
+            updateQrSpan(activeCount);
 
             snapshot.docChanges().forEach((change) => {
                 const data = change.doc.data();
@@ -131,15 +155,16 @@
                 console.log(`Reflowing grid: ${Math.round(emptyRatio * 100)}% empty slots found. Compacting.`);
                 
                 // 1. Collect active slots in order
-                const activeSlots = Array.from(containerGrid.children).filter(s => !s.classList.contains('empty'));
+                const activeSlots = Array.from(containerGrid.children).filter(s => !s.classList.contains('empty') && s.id !== "qr-code-box");
                 
                 // 2. Clear grid and re-append active ones
                 containerGrid.innerHTML = "";
+                containerGrid.appendChild(qrBox);
                 activeSlots.forEach(s => containerGrid.appendChild(s));
                 
                 // 3. Fill with baseline empty slots (always maintain at least 60 total)
                 availableSlots = [];
-                const targetTotal = Math.max(60, activeSlots.length);
+                const targetTotal = Math.max(60, activeSlots.length + 1); // +1 for the QR box
                 while (containerGrid.children.length < targetTotal) {
                     availableSlots.push(createSlot());
                 }
@@ -197,6 +222,9 @@
     </header>
     <main>
         <div id="container-grid" class="grid">
+            <div id="qr-code-box" class="container-box qr-box">
+                <img id="qr-image" alt="Scan to join">
+            </div>
             <!-- Slots will be injected and managed here -->
         </div>
     </main>
