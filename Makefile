@@ -30,14 +30,15 @@ frontend:
 	@echo "$(BLUE)Preparing and uploading frontend assets...$(NC)"
 	# Create a temporary directory for processed frontend files
 	mkdir -p .tmp-frontend
-	cp frontend/* .tmp-frontend/
+	cp -r frontend/* .tmp-frontend/
 	# Replace Project ID placeholder in presentation.html
 	sed -i '' 's/YOUR_PROJECT_ID/$(PROJECT_ID)/g' .tmp-frontend/presentation.html
 	# Upload to GCS
-	gcloud storage cp .tmp-frontend/* gs://$(BUCKET_NAME)/
+	gcloud storage cp -r .tmp-frontend/* gs://$(BUCKET_NAME)/
 	# Invalidate CDN cache
-	gcloud compute url-maps invalidate-cdn-cache demo-url-map --path "/*" --async
+	gcloud compute url-maps invalidate-cdn-cache demo-url-map --path "/*"
 	rm -rf .tmp-frontend
+
 
 cleanup:
 	@echo "$(BLUE)Building and deploying cleanup service...$(NC)"
