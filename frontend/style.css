@@ -3,6 +3,12 @@
     padding: 0;
     box-sizing: border-box;
 }
+
+/* Hide content until fonts are loaded to prevent FOUT */
+html.fonts-loading {
+    visibility: hidden;
+}
+
 body {
     font-family: 'Google Sans', Arial, sans-serif;
     background-color: #f8f9fa;
@@ -10,6 +16,12 @@ body {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+}
+
+.noto-color-emoji-regular {
+  font-family: "Noto Color Emoji", sans-serif;
+  font-weight: 400;
+  font-style: normal;
 }
 
 /* Presentation Screen Layout */
@@ -140,10 +152,12 @@ body {
 
 /* Highly responsive font sizes */
 .container-box .emoji {
-    font-size: 40cqw; /* Adapt emoji to container width */
+    font-family: "Noto Color Emoji", sans-serif;
+    font-size: 65cqw; /* Adapt emoji to container width */
     line-height: 1;
-    color: white; 
-    margin-top: 10cqw; /* Spacing based on container size */
+    color: white;
+    /* Center in remaining space below absolute instance-id */
+    margin-top: 10cqw; 
 }
 
 .status-idle .emoji, .status-idle .instance-id {
@@ -333,6 +347,7 @@ body {
 }
 
 .emoji-grid button, .color-grid button {
+    font-family: "Noto Color Emoji", sans-serif;
     padding: 10px;
     border: 1px solid #dadce0;
     border-radius: 8px;
