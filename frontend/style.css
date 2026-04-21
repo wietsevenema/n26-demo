@@ -33,7 +33,7 @@ body {
 
 .dashboard-header {
     background: white;
-    padding: 1.5rem 2.5rem;
+    padding: 0.8rem 1.5rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
