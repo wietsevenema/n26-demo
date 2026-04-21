@@ -420,8 +420,8 @@ body {
 
 .emoji-grid, .color-grid {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 12px;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
     justify-items: center;
     width: 100%;
     max-width: 450px;
