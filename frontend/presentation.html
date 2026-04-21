@@ -1,250 +1,257 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cloud Next Demo - Live Visualization</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>👟</text></svg>">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cloud Next Demo - Live Visualization</title>
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>👟</text></svg>">
 
-    <!-- Preload primary fonts -->
-    <link rel="preload" href="vendor/fonts/e3t4euO8T-267oIAQAu6jDQyK3nVivM.woff2" as="font" type="font/woff2" crossorigin>
-    <link rel="preload" href="vendor/fonts/QlddNThLqRwH-OJ1UHjlKENVzkWGVkL3GZQmAwLyya15.woff2" as="font" type="font/woff2" crossorigin>
+  <!-- Preload primary fonts -->
+  <link rel="preload" href="vendor/fonts/e3t4euO8T-267oIAQAu6jDQyK3nVivM.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="vendor/fonts/QlddNThLqRwH-OJ1UHjlKENVzkWGVkL3GZQmAwLyya15.woff2" as="font" type="font/woff2"
+    crossorigin>
 
-    <link rel="stylesheet" href="vendor/fonts.css">
-    <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="vendor/fonts.css">
+  <link rel="stylesheet" href="style.css">
 
-    <script>
-        // Prevent FOUT (Flash of Unstyled Text)
-        document.documentElement.classList.add('fonts-loading');
-        document.fonts.ready.then(() => {
-            document.documentElement.classList.remove('fonts-loading');
-        });
-    </script>
+  <script>
+    // Prevent FOUT (Flash of Unstyled Text)
+    document.documentElement.classList.add('fonts-loading');
+    document.fonts.ready.then(() => {
+      document.documentElement.classList.remove('fonts-loading');
+    });
+  </script>
 
-    <script type="module">
-        import { initializeApp } from "./vendor/firebase-app.js";
-        import { getFirestore, collection, onSnapshot } from "./vendor/firebase-firestore.js";
+  <script type="module">
+    import { initializeApp } from "./vendor/firebase-app.js";
+    import { getFirestore, collection, onSnapshot } from "./vendor/firebase-firestore.js";
 
-        const firebaseConfig = {
-            projectId: "YOUR_PROJECT_ID", // Updated during deployment
-        };
+    const firebaseConfig = {
+      projectId: "YOUR_PROJECT_ID", // Updated during deployment
+    };
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const containerGrid = document.getElementById("container-grid");
-        const qrBox = document.getElementById("qr-code-box");
-        const qrImage = document.getElementById("qr-image");
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const containerGrid = document.getElementById("container-grid");
+    const qrBox = document.getElementById("qr-code-box");
+    const qrImage = document.getElementById("qr-image");
 
-        // Initialize QR code
-        qrImage.src = "qr.png";
+    // Initialize QR code
+    qrImage.src = "qr.png";
 
-        const instanceToSlot = new Map();
-        let availableSlots = [];
-        let currentQrSpan = 4;
+    const instanceToSlot = new Map();
+    let availableSlots = [];
+    let currentQrSpan = 4;
 
-        function createSlot() {
-            const slot = document.createElement("div");
-            slot.className = "container-box empty";
-            containerGrid.appendChild(slot);
-            return slot;
-        }
+    function createSlot() {
+      const slot = document.createElement("div");
+      slot.className = "container-box empty";
+      containerGrid.appendChild(slot);
+      return slot;
+    }
 
-        function updateQrSpan(activeCount) {
-            let newSpan = 4;
-            if (activeCount >= 40 && activeCount < 80) newSpan = 3;
-            else if (activeCount >= 80 && activeCount < 150) newSpan = 2;
-            else if (activeCount >= 150) newSpan = 1;
+    function updateQrSpan(activeCount) {
+      let newSpan = 4;
+      if (activeCount >= 40 && activeCount < 80) newSpan = 3;
+      else if (activeCount >= 80 && activeCount < 150) newSpan = 2;
+      else if (activeCount >= 150) newSpan = 1;
 
-            if (newSpan !== currentQrSpan) {
-                currentQrSpan = newSpan;
-                updateGridLayout();
-            }
-        }
-
-        function updateGridLayout() {
-            const slotCount = containerGrid.children.length;
-            if (slotCount === 0) return;
-
-            // QR code takes S*S cells but is only 1 child
-            const effectiveSlotCount = slotCount - 1 + (currentQrSpan * currentQrSpan);
-
-            const vWidth = window.innerWidth;
-            const vHeight = window.innerHeight;
-            const viewportAspect = vWidth / vHeight;
-
-            const idealCols = Math.sqrt(effectiveSlotCount * viewportAspect);
-            const options = [Math.floor(idealCols), Math.ceil(idealCols)].filter(c => c > 0);
-            
-            let bestCols = options[0] || 10;
-            let minDiff = Infinity;
-
-            options.forEach(cols => {
-                const rows = Math.ceil(effectiveSlotCount / cols);
-                const cellAspect = (vWidth / cols) / (vHeight / rows);
-                const diff = Math.abs(1 - cellAspect);
-                
-                if (diff < minDiff - 0.01) {
-                    minDiff = diff;
-                    bestCols = cols;
-                } else if (Math.abs(diff - minDiff) < 0.01 && cellAspect > 1) {
-                    bestCols = cols;
-                }
-            });
-
-            const finalCols = bestCols;
-            const finalRows = Math.ceil(effectiveSlotCount / finalCols);
-
-            containerGrid.style.setProperty('--cols', finalCols);
-            containerGrid.style.setProperty('--rows', finalRows);
-            containerGrid.style.setProperty('--qr-span', currentQrSpan);
-        }
-
-        window.addEventListener('resize', updateGridLayout);
-
-        // Initialize baseline
-        for (let i = 0; i < 60; i++) {
-            availableSlots.push(createSlot());
-        }
+      if (newSpan !== currentQrSpan) {
+        currentQrSpan = newSpan;
         updateGridLayout();
+      }
+    }
 
-        // Listen to Firestore real-time updates
-        onSnapshot(collection(db, "active_containers"), (snapshot) => {
-            // Update the live counters
-            let idleCount = 0;
-            snapshot.docs.forEach(doc => {
-                if (doc.data().status === 'idle') idleCount++;
-            });
-            const activeCount = snapshot.size - idleCount;
-            
-            document.getElementById("active-counter").innerText = activeCount;
-            document.getElementById("idle-counter").innerText = idleCount;
+    function updateGridLayout() {
+      const slotCount = containerGrid.children.length;
+      if (slotCount === 0) return;
 
-            updateQrSpan(activeCount);
+      // QR code takes S*S cells but is only 1 child
+      const effectiveSlotCount = slotCount - 1 + (currentQrSpan * currentQrSpan);
 
-            snapshot.docChanges().forEach((change) => {
-                const data = change.doc.data();
-                const id = change.doc.id;
+      const vWidth = window.innerWidth;
+      const vHeight = window.innerHeight;
+      const viewportAspect = vWidth / vHeight;
 
-                if (change.type === "added") {
-                    let slot;
-                    if (availableSlots.length > 0) {
-                        slot = availableSlots.shift(); // Fill holes first
-                        slot.classList.remove("empty");
-                    } else {
-                        slot = createSlot();
-                        slot.classList.remove("empty");
-                        updateGridLayout(); // Only change grid if we added a new physical slot
-                    }
-                    instanceToSlot.set(id, slot);
-                    updateSlot(slot, data, true);
-                }
-                
-                if (change.type === "modified") {
-                    const slot = instanceToSlot.get(id);
-                    if (slot) updateSlot(slot, data, false);
-                }
-                
-                if (change.type === "removed") {
-                    const slot = instanceToSlot.get(id);
-                    if (slot) {
-                        clearSlot(slot);
-                        instanceToSlot.delete(id);
-                        availableSlots.push(slot); // Make it available for reuse
-                    }
-                }
-            });
-        });
+      const idealCols = Math.sqrt(effectiveSlotCount * viewportAspect);
+      const options = [Math.floor(idealCols), Math.ceil(idealCols)].filter(c => c > 0);
 
-        // 1-Minute Reflow: The critical "Cleaning" interval
-        setInterval(() => {
-            const totalSlots = containerGrid.children.length;
-            if (totalSlots === 0) return;
+      let bestCols = options[0] || 10;
+      let minDiff = Infinity;
 
-            const emptyCount = availableSlots.length;
-            const emptyRatio = emptyCount / totalSlots;
-            
-            // Trigger reflow based solely on vacancy threshold (>= 25%)
-            if (emptyRatio >= 0.25) {
-                console.log(`Reflowing grid: ${Math.round(emptyRatio * 100)}% empty slots found. Compacting.`);
-                
-                // 1. Collect active slots in order
-                const activeSlots = Array.from(containerGrid.children).filter(s => !s.classList.contains('empty') && s.id !== "qr-code-box");
-                
-                // 2. Clear grid and re-append active ones
-                containerGrid.innerHTML = "";
-                containerGrid.appendChild(qrBox);
-                activeSlots.forEach(s => containerGrid.appendChild(s));
-                
-                // 3. Fill with baseline empty slots (always maintain at least 60 total)
-                availableSlots = [];
-                const targetTotal = Math.max(60, activeSlots.length + 1); // +1 for the QR box
-                while (containerGrid.children.length < targetTotal) {
-                    availableSlots.push(createSlot());
-                }
-                
-                updateGridLayout();
-            }
-        }, 60000);
+      options.forEach(cols => {
+        const rows = Math.ceil(effectiveSlotCount / cols);
+        const cellAspect = (vWidth / cols) / (vHeight / rows);
+        const diff = Math.abs(1 - cellAspect);
 
-        function updateSlot(slot, data, isNew) {
-            const statusClass = data.status === 'idle' ? 'status-idle' : 'status-connected';
-            slot.style.backgroundColor = data.color;
-            slot.className = `container-box ${statusClass}`;
-            
-            if (isNew) slot.classList.add("pop-in");
-            
-            slot.innerHTML = `
+        if (diff < minDiff - 0.01) {
+          minDiff = diff;
+          bestCols = cols;
+        } else if (Math.abs(diff - minDiff) < 0.01 && cellAspect > 1) {
+          bestCols = cols;
+        }
+      });
+
+      const finalCols = bestCols;
+      const finalRows = Math.ceil(effectiveSlotCount / finalCols);
+
+      containerGrid.style.setProperty('--cols', finalCols);
+      containerGrid.style.setProperty('--rows', finalRows);
+      containerGrid.style.setProperty('--qr-span', currentQrSpan);
+    }
+
+    window.addEventListener('resize', updateGridLayout);
+
+    // Initialize baseline
+    for (let i = 0; i < 60; i++) {
+      availableSlots.push(createSlot());
+    }
+    updateGridLayout();
+
+    // Listen to Firestore real-time updates
+    onSnapshot(collection(db, "active_containers"), (snapshot) => {
+      // Update the live counters
+      let idleCount = 0;
+      snapshot.docs.forEach(doc => {
+        if (doc.data().status === 'idle') idleCount++;
+      });
+      const activeCount = snapshot.size - idleCount;
+
+      document.getElementById("active-counter").innerText = activeCount;
+      document.getElementById("idle-counter").innerText = idleCount;
+
+      updateQrSpan(activeCount);
+
+      snapshot.docChanges().forEach((change) => {
+        const data = change.doc.data();
+        const id = change.doc.id;
+
+        if (change.type === "added") {
+          let slot;
+          if (availableSlots.length > 0) {
+            slot = availableSlots.shift(); // Fill holes first
+            slot.classList.remove("empty");
+          } else {
+            slot = createSlot();
+            slot.classList.remove("empty");
+            updateGridLayout(); // Only change grid if we added a new physical slot
+          }
+          instanceToSlot.set(id, slot);
+          updateSlot(slot, data, true);
+        }
+
+        if (change.type === "modified") {
+          const slot = instanceToSlot.get(id);
+          if (slot) updateSlot(slot, data, false);
+        }
+
+        if (change.type === "removed") {
+          const slot = instanceToSlot.get(id);
+          if (slot) {
+            clearSlot(slot);
+            instanceToSlot.delete(id);
+            availableSlots.push(slot); // Make it available for reuse
+          }
+        }
+      });
+    });
+
+    // 1-Minute Reflow: The critical "Cleaning" interval
+    setInterval(() => {
+      const totalSlots = containerGrid.children.length;
+      if (totalSlots === 0) return;
+
+      const emptyCount = availableSlots.length;
+      const emptyRatio = emptyCount / totalSlots;
+
+      // Trigger reflow based solely on vacancy threshold (>= 25%)
+      if (emptyRatio >= 0.25) {
+        console.log(`Reflowing grid: ${Math.round(emptyRatio * 100)}% empty slots found. Compacting.`);
+
+        // 1. Collect active slots in order
+        const activeSlots = Array.from(containerGrid.children).filter(s => !s.classList.contains('empty') && s.id !== "qr-code-box");
+
+        // 2. Clear grid and re-append active ones
+        containerGrid.innerHTML = "";
+        containerGrid.appendChild(qrBox);
+        activeSlots.forEach(s => containerGrid.appendChild(s));
+
+        // 3. Fill with baseline empty slots (always maintain at least 60 total)
+        availableSlots = [];
+        const targetTotal = Math.max(60, activeSlots.length + 1); // +1 for the QR box
+        while (containerGrid.children.length < targetTotal) {
+          availableSlots.push(createSlot());
+        }
+
+        updateGridLayout();
+      }
+    }, 60000);
+
+    function updateSlot(slot, data, isNew) {
+      const statusClass = data.status === 'idle' ? 'status-idle' : 'status-connected';
+      slot.style.backgroundColor = data.color;
+      slot.className = `container-box ${statusClass}`;
+
+      if (isNew) slot.classList.add("pop-in");
+
+      slot.innerHTML = `
                 <div class="instance-id">${data.instance_id}</div>
                 <div class="emoji">${data.emoji}</div>
             `;
-            
-            if (isNew) {
-                setTimeout(() => slot.classList.remove('pop-in'), 600);
-            }
-        }
 
-        function clearSlot(slot) {
-            slot.classList.add('exit');
-            setTimeout(() => {
-                slot.innerHTML = "";
-                slot.style.backgroundColor = "transparent";
-                slot.className = "container-box empty";
-                slot.style.opacity = "";
-                slot.style.transform = "";
-                slot.style.filter = "";
-            }, 500);
-        }
-    </script>
+      if (isNew) {
+        setTimeout(() => slot.classList.remove('pop-in'), 600);
+      }
+    }
+
+    function clearSlot(slot) {
+      slot.classList.add('exit');
+      setTimeout(() => {
+        slot.innerHTML = "";
+        slot.style.backgroundColor = "transparent";
+        slot.className = "container-box empty";
+        slot.style.opacity = "";
+        slot.style.transform = "";
+        slot.style.filter = "";
+      }, 500);
+    }
+  </script>
 </head>
+
 <body class="presentation">
-    <header class="dashboard-header">
-        <div class="header-left">
-            <h1 class="main-title">Real-time Cloud Run instances</h1>
-            <p class="sub-title">One instance per attendee.</p>
-        </div>
-        <div class="header-center" style="flex: 1; display: flex; align-items: center; justify-content: center; border-left: 2px solid #e8eaed; border-right: 2px solid #e8eaed; margin: 0 1.5rem; align-self: stretch;">
-            <div style="font-family: 'Inconsolata', monospace; font-size: 3rem; font-weight: 700; color: #1a73e8; letter-spacing: -1px;">
-                goo.gle/run26
-            </div>
-        </div>
-        <div class="header-right">
-            <div class="counter-group">
-                <div class="counter-label">Active</div>
-                <div id="active-counter" class="counter-value">0</div>
-            </div>
-            <div class="counter-group">
-                <div class="counter-label" style="color: #70757a;">Idle</div>
-                <div id="idle-counter" class="counter-value idle-value" style="color: #bdc1c6;">0</div>
-            </div>
-        </div>
-    </header>
-    <main>
-        <div id="container-grid" class="grid">
-            <div id="qr-code-box" class="container-box qr-box">
-                <img id="qr-image" alt="Scan to join">
-            </div>
-            <!-- Slots will be injected and managed here -->
-        </div>
-    </main>
+  <header class="dashboard-header">
+    <div class="header-left">
+      <h1 class="main-title">Real-time Cloud Run instances</h1>
+      <p class="sub-title">One instance per attendee.</p>
+    </div>
+    <div class="header-center"
+      style="flex: 1; display: flex; align-items: center; justify-content: center; border-left: 2px solid #e8eaed; border-right: 2px solid #e8eaed; margin: 0 1.5rem; align-self: stretch;">
+      <div
+        style="font-family: 'Inconsolata', monospace; font-size: 3rem; font-weight: 700; color: #174EA6; letter-spacing: -1px;">
+        Link: https://goo.gle/run26
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="counter-group">
+        <div class="counter-label">Active</div>
+        <div id="active-counter" class="counter-value">0</div>
+      </div>
+      <div class="counter-group">
+        <div class="counter-label" style="color: #70757a;">Idle</div>
+        <div id="idle-counter" class="counter-value idle-value" style="color: #bdc1c6;">0</div>
+      </div>
+    </div>
+  </header>
+  <main>
+    <div id="container-grid" class="grid">
+      <div id="qr-code-box" class="container-box qr-box">
+        <img id="qr-image" alt="Scan to join">
+      </div>
+      <!-- Slots will be injected and managed here -->
+    </div>
+  </main>
 </body>
+
 </html>
