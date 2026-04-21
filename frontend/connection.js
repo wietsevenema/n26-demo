@@ -111,11 +111,6 @@ if (typeof window !== 'undefined') {
         
         // Add to clicked
         btn.classList.add('selected');
-
-        // Auto-advance from step 1 to step 2
-        if (currentStep === 1 && btn.name === 'emoji') {
-            setTimeout(() => nextStep(), 200);
-        }
     };
 
     window.updateSelectionVisuals = function(emoji, color) {
