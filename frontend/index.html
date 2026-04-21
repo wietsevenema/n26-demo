@@ -27,20 +27,8 @@
 </head>
 <body>
     <div class="container" id="main-container">
-        <div id="setup-view">
-            <h1 class="retro-header">Cloud Run Demo</h1>
-            <p class="intro-text">
-                Spin up a dedicated, isolated container instance on Google Cloud.
-            </p>
-            <button class="start-btn" onclick="startContainer()">
-                START INSTANCE
-            </button>
-        </div>
-
-        <div id="active-view" style="display:none;">
-            <h1 class="retro-header">Instance Control</h1>
-            
-            <!-- Section 2: Live Preview (1:1 with dashboard) -->
+        <div id="active-view">
+            <!-- Pinned Header: Container instance visualization and connection state -->
             <div id="preview-wrapper">
                 <div id="pulse-indicator" class="pulse-dot"></div>
                 <div id="container-preview">
@@ -49,50 +37,108 @@
                 </div>
             </div>
 
-            <!-- Section 3: Customizations -->
-            <div class="section-label">Customization</div>
-            <div class="controls" onclick="handleSelection(event)">
-                <div class="control-group">
-                    <label>Emoji</label>
-                    <div class="emoji-grid">
-                        <button ws-send name="emoji" value="🐶">🐶</button>
-                        <button ws-send name="emoji" value="🐱">🐱</button>
-                        <button ws-send name="emoji" value="🐭">🐭</button>
-                        <button ws-send name="emoji" value="🐹">🐹</button>
-                        <button ws-send name="emoji" value="🐰">🐰</button>
-                        <button ws-send name="emoji" value="🦊">🦊</button>
-                        <button ws-send name="emoji" value="🐻">🐻</button>
-                        <button ws-send name="emoji" value="🐼">🐼</button>
-                        <button ws-send name="emoji" value="🐻‍❄️">🐻‍❄️</button>
-                        <button ws-send name="emoji" value="🐨">🐨</button>
-                        <button ws-send name="emoji" value="🐯">🐯</button>
-                        <button ws-send name="emoji" value="🦁">🦁</button>
-                        <button ws-send name="emoji" value="🐮">🐮</button>
-                        <button ws-send name="emoji" value="🦀">🦀</button>
-                        <button ws-send name="emoji" value="🐸">🐸</button>
-                        <button ws-send name="emoji" value="🐵">🐵</button>
-                        <button ws-send name="emoji" value="🦄">🦄</button>
-                        <button ws-send name="emoji" value="🐝">🐝</button>
-                        <button ws-send name="emoji" value="🐙">🐙</button>
-                        <button ws-send name="emoji" value="🦋">🦋</button>
+            <!-- Stepper Content -->
+            <div id="stepper-content">
+                <!-- Step 1: Emoji selection -->
+                <div class="step" id="step-1">
+                    <div class="section-label">Step 1: Pick an emoji</div>
+                    <div class="controls" onclick="handleSelection(event)">
+                        <div class="control-group">
+                            <div class="emoji-grid">
+                                <button ws-send name="emoji" value="🐶">🐶</button>
+                                <button ws-send name="emoji" value="🐱">🐱</button>
+                                <button ws-send name="emoji" value="🐭">🐭</button>
+                                <button ws-send name="emoji" value="🐹">🐹</button>
+                                <button ws-send name="emoji" value="🐰">🐰</button>
+                                <button ws-send name="emoji" value="🦊">🦊</button>
+                                <button ws-send name="emoji" value="🐻">🐻</button>
+                                <button ws-send name="emoji" value="🐼">🐼</button>
+                                <button ws-send name="emoji" value="🐻‍❄️">🐻‍❄️</button>
+                                <button ws-send name="emoji" value="🐨">🐨</button>
+                                <button ws-send name="emoji" value="🐯">🐯</button>
+                                <button ws-send name="emoji" value="🦁">🦁</button>
+                                <button ws-send name="emoji" value="🐮">🐮</button>
+                                <button ws-send name="emoji" value="🦀">🦀</button>
+                                <button ws-send name="emoji" value="🐸">🐸</button>
+                                <button ws-send name="emoji" value="🐵">🐵</button>
+                                <button ws-send name="emoji" value="🦄">🦄</button>
+                                <button ws-send name="emoji" value="🐝">🐝</button>
+                                <button ws-send name="emoji" value="🐙">🐙</button>
+                                <button ws-send name="emoji" value="🦋">🦋</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="control-group">
-                    <label>Background color</label>
-                    <div class="color-grid">
-                        <button ws-send name="color" value="#1967D2" style="background-color: #1967D2;"></button>
-                        <button ws-send name="color" value="#C5221F" style="background-color: #C5221F;"></button>
-                        <button ws-send name="color" value="#F29900" style="background-color: #F29900;"></button>
-                        <button ws-send name="color" value="#188038" style="background-color: #188038;"></button>
+
+                <!-- Step 2: Color selection -->
+                <div class="step" id="step-2" style="display:none;">
+                    <div class="section-label">Step 2: Choose a color</div>
+                    <div class="controls" onclick="handleSelection(event)">
+                        <div class="control-group">
+                            <div class="color-grid">
+                                <button ws-send name="color" value="#1967D2" style="background-color: #1967D2;"></button>
+                                <button ws-send name="color" value="#C5221F" style="background-color: #C5221F;"></button>
+                                <button ws-send name="color" value="#F29900" style="background-color: #F29900;"></button>
+                                <button ws-send name="color" value="#188038" style="background-color: #188038;"></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 3: Serverless text -->
+                <div class="step" id="step-3" style="display:none;">
+                    <div class="section-label">Cloud Run</div>
+                    <p class="step-text">
+                        Cloud Run is a serverless platform, it abstracts away infrastructure so you can focus on your code.
+                    </p>
+                </div>
+
+                <!-- Step 4: Autoscaling text -->
+                <div class="step" id="step-4" style="display:none;">
+                    <div class="section-label">Autoscaling</div>
+                    <p class="step-text">
+                        A Cloud Run service uses autoscaling of container instances to serve requests. This means it starts and stops container instances automatically to handle all requests.
+                    </p>
+                </div>
+
+                <!-- Step 5: Scaling to zero text -->
+                <div class="step" id="step-5" style="display:none;">
+                    <div class="section-label">Efficiency</div>
+                    <p class="step-text">
+                        Scaling to zero. When no one is using the service, Cloud Run scales down to zero instances. No compute, no cost.
+                    </p>
+                </div>
+
+                <!-- Step 6: Concurrency text -->
+                <div class="step" id="step-6" style="display:none;">
+                    <div class="section-label">Concurrency</div>
+                    <p class="step-text">
+                        Concurrency: A single container can handle multiple requests at the same time.
+                    </p>
+                </div>
+
+                <!-- Step 7: Single concurrency text -->
+                <div class="step" id="step-7" style="display:none;">
+                    <div class="section-label">Demo Setting</div>
+                    <p class="step-text">
+                        Single concurrency. In this demo, we limit concurrency to one, which means every container instance can handle only one request at a time.
+                    </p>
+                </div>
+
+                <!-- Step 8: System Metrics -->
+                <div class="step" id="step-8" style="display:none;">
+                    <div class="section-label">Step 8: System Metrics</div>
+                    <div id="system-readout" class="terminal-box">
+                        <!-- Injected by backend as terminal lines -->
+                        <div class="terminal-line">Initializing...</div>
                     </div>
                 </div>
             </div>
 
-            <!-- Section 4: System Readout -->
-            <div class="section-label">System Readout</div>
-            <div id="system-readout" class="terminal-box">
-                <!-- Injected by backend as terminal lines -->
-                <div class="terminal-line">Initializing...</div>
+            <!-- Stepper Navigation -->
+            <div id="stepper-nav">
+                <button id="btn-prev" class="nav-btn" onclick="prevStep()" disabled>BACK</button>
+                <button id="btn-next" class="nav-btn" onclick="nextStep()">NEXT</button>
             </div>
         </div>
     </div>

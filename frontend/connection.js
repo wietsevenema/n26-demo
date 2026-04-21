@@ -22,12 +22,11 @@ if (typeof window !== 'undefined') {
         if (!statusEl && type !== 'connected') {
             const previewWrapper = document.getElementById('preview-wrapper');
             if (previewWrapper) {
-                previewWrapper.innerHTML = `
-                    <div id="pulse-indicator" class="pulse-dot"></div>
-                    <div id="container-preview">
-                        <div id="connection-status" class="status-placeholder">${message}</div>
-                    </div>
-                `;
+                // Ensure we don't wipe out the whole wrapper if we just want to update status
+                const containerPreview = document.getElementById('container-preview');
+                if (containerPreview) {
+                    containerPreview.innerHTML = `<div id="connection-status" class="status-placeholder">${message}</div>`;
+                }
                 statusEl = document.getElementById('connection-status');
                 indicator = document.getElementById('pulse-indicator');
             }
@@ -44,10 +43,38 @@ if (typeof window !== 'undefined') {
             else if (type === 'connected') indicator.classList.add('connected');
         }
     };
+
+    let currentStep = 1;
+    const totalSteps = 8;
+
+    window.showStep = function(step) {
+        document.querySelectorAll('.step').forEach(el => el.style.display = 'none');
+        const activeStep = document.getElementById(`step-${step}`);
+        if (activeStep) activeStep.style.display = 'block';
+        
+        // Update nav buttons
+        const prevBtn = document.getElementById('btn-prev');
+        const nextBtn = document.getElementById('btn-next');
+        if (prevBtn) prevBtn.disabled = (step === 1);
+        if (nextBtn) {
+            nextBtn.disabled = (step === totalSteps);
+            nextBtn.innerText = (step === totalSteps) ? 'FINISH' : 'NEXT';
+        }
+        
+        currentStep = step;
+    };
+
+    window.nextStep = function() {
+        if (currentStep < totalSteps) showStep(currentStep + 1);
+    };
+
+    window.prevStep = function() {
+        if (currentStep > 1) showStep(currentStep - 1);
+    };
+
     window.startContainer = function() {
-        document.getElementById('setup-view').style.display = 'none';
         const activeView = document.getElementById('active-view');
-        activeView.style.display = 'block';
+        if (!activeView) return;
         
         setConnectionStatus('Booting container...', 'connecting');
         
@@ -57,6 +84,8 @@ if (typeof window !== 'undefined') {
         if (window.htmx) {
             htmx.process(activeView);
         }
+
+        showStep(1);
     };
 
     window.handleSelection = function(event) {
@@ -128,10 +157,16 @@ if (typeof window !== 'undefined') {
             }
         };
         
-        if (window.htmx) {
-            setupHtmx();
+        // Always wait for DOMContentLoaded to ensure elements like #active-view exist
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                setupHtmx();
+                startContainer();
+            });
         } else {
-            document.addEventListener('DOMContentLoaded', setupHtmx);
+            // DOM is already parsed (though unlikely for a head script)
+            setupHtmx();
+            startContainer();
         }
     }
 }
