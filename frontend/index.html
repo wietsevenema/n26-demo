@@ -1,106 +1,111 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cloud Run Instance - Attendee</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>👟</text></svg>">
-    
-    <!-- Preload primary fonts -->
-    <link rel="preload" href="vendor/fonts/e3t4euO8T-267oIAQAu6jDQyK3nVivM.woff2" as="font" type="font/woff2" crossorigin>
-    <link rel="preload" href="vendor/fonts/QlddNThLqRwH-OJ1UHjlKENVzkWGVkL3GZQmAwLyya15.woff2" as="font" type="font/woff2" crossorigin>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cloud Run Instance - Attendee</title>
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>👟</text></svg>">
 
-    <script src="vendor/htmx.min.js"></script>
-    <script src="vendor/ws.js"></script>
-    <link rel="stylesheet" href="vendor/fonts.css">
-    <link rel="stylesheet" href="style.css">
-    
-    <script>
-        // Prevent FOUT (Flash of Unstyled Text)
-        document.documentElement.classList.add('fonts-loading');
-        document.fonts.ready.then(() => {
-            document.documentElement.classList.remove('fonts-loading');
-        });
-    </script>
+  <!-- Preload primary fonts -->
+  <link rel="preload" href="vendor/fonts/e3t4euO8T-267oIAQAu6jDQyK3nVivM.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="vendor/fonts/QlddNThLqRwH-OJ1UHjlKENVzkWGVkL3GZQmAwLyya15.woff2" as="font" type="font/woff2"
+    crossorigin>
 
-    <script src="connection.js"></script>
+  <script src="vendor/htmx.min.js"></script>
+  <script src="vendor/ws.js"></script>
+  <link rel="stylesheet" href="vendor/fonts.css">
+  <link rel="stylesheet" href="style.css">
+
+  <script>
+    // Prevent FOUT (Flash of Unstyled Text)
+    document.documentElement.classList.add('fonts-loading');
+    document.fonts.ready.then(() => {
+      document.documentElement.classList.remove('fonts-loading');
+    });
+  </script>
+
+  <script src="connection.js"></script>
 </head>
+
 <body>
-    <div class="container" id="main-container">
-        <div id="active-view">
-            <!-- Pinned Header: Container instance visualization and connection state -->
-            <div id="preview-wrapper">
-                <div id="pulse-indicator" class="pulse-dot"></div>
-                <div id="container-preview">
-                    <!-- Status message shown before backend injects the real .container-box -->
-                    <div id="connection-status" class="status-placeholder">Initializing terminal...</div>
-                </div>
-            </div>
-
-            <!-- Stepper Content -->
-            <div id="stepper-content">
-                <!-- Step 1: Emoji selection -->
-                <div class="step" id="step-1">
-                    <div class="section-label">Step 1: Pick an emoji</div>
-                    <div class="controls" onclick="handleSelection(event)">
-                        <div class="control-group">
-                            <div class="emoji-grid">
-                                <button ws-send name="emoji" value="🐶">🐶</button>
-                                <button ws-send name="emoji" value="🐱">🐱</button>
-                                <button ws-send name="emoji" value="🐭">🐭</button>
-                                <button ws-send name="emoji" value="🐹">🐹</button>
-                                <button ws-send name="emoji" value="🐰">🐰</button>
-                                <button ws-send name="emoji" value="🦊">🦊</button>
-                                <button ws-send name="emoji" value="🐻">🐻</button>
-                                <button ws-send name="emoji" value="🐼">🐼</button>
-                                <button ws-send name="emoji" value="🐻‍❄️">🐻‍❄️</button>
-                                <button ws-send name="emoji" value="🐨">🐨</button>
-                                <button ws-send name="emoji" value="🐯">🐯</button>
-                                <button ws-send name="emoji" value="🦁">🦁</button>
-                                <button ws-send name="emoji" value="🐮">🐮</button>
-                                <button ws-send name="emoji" value="🦀">🦀</button>
-                                <button ws-send name="emoji" value="🐸">🐸</button>
-                                <button ws-send name="emoji" value="🐵">🐵</button>
-                                <button ws-send name="emoji" value="🦄">🦄</button>
-                                <button ws-send name="emoji" value="🐝">🐝</button>
-                                <button ws-send name="emoji" value="🐙">🐙</button>
-                                <button ws-send name="emoji" value="🦋">🦋</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Step 2: Color selection -->
-                <div class="step" id="step-2" style="display:none;">
-                    <div class="section-label">Step 2: Choose a color</div>
-                    <div class="controls" onclick="handleSelection(event)">
-                        <div class="control-group">
-                            <div class="color-grid">
-                                <button ws-send name="color" value="#1967D2" style="background-color: #1967D2;"></button>
-                                <button ws-send name="color" value="#C5221F" style="background-color: #C5221F;"></button>
-                                <button ws-send name="color" value="#F29900" style="background-color: #F29900;"></button>
-                                <button ws-send name="color" value="#188038" style="background-color: #188038;"></button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Step 3: System Metrics -->
-                <div class="step" id="step-3" style="display:none;">
-                    <div class="section-label">Step 3: System Metrics</div>
-                    <div id="system-readout" class="terminal-box">
-                        <!-- Injected by backend as terminal lines -->
-                        <div class="terminal-line">Initializing...</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Stepper Navigation -->
-            <div id="stepper-nav">
-                <button id="btn-prev" class="nav-btn" onclick="prevStep()" disabled>BACK</button>
-                <button id="btn-next" class="nav-btn" onclick="nextStep()">NEXT</button>
-            </div>
+  <div class="container" id="main-container">
+    <div id="active-view">
+      <!-- Pinned Header: Container instance visualization and connection state -->
+      <div id="preview-wrapper">
+        <div id="pulse-indicator" class="pulse-dot"></div>
+        <div id="container-preview">
+          <!-- Status message shown before backend injects the real .container-box -->
+          <div id="connection-status" class="status-placeholder">Initializing terminal...</div>
         </div>
+      </div>
+
+      <!-- Stepper Content -->
+      <div id="stepper-content">
+        <!-- Step 1: Emoji selection -->
+        <div class="step" id="step-1">
+          <div class="section-label">Step 1: Pick an emoji</div>
+          <div class="controls" onclick="handleSelection(event)">
+            <div class="control-group">
+              <div class="emoji-grid">
+                <button ws-send name="emoji" value="🐶">🐶</button>
+                <button ws-send name="emoji" value="🐱">🐱</button>
+                <button ws-send name="emoji" value="🐭">🐭</button>
+                <button ws-send name="emoji" value="🐹">🐹</button>
+                <button ws-send name="emoji" value="🐰">🐰</button>
+                <button ws-send name="emoji" value="🦊">🦊</button>
+                <button ws-send name="emoji" value="🐻">🐻</button>
+                <button ws-send name="emoji" value="🐼">🐼</button>
+                <button ws-send name="emoji" value="🐻‍❄️">🐻‍❄️</button>
+                <button ws-send name="emoji" value="🐨">🐨</button>
+                <button ws-send name="emoji" value="🐯">🐯</button>
+                <button ws-send name="emoji" value="🦁">🦁</button>
+                <button ws-send name="emoji" value="🐮">🐮</button>
+                <button ws-send name="emoji" value="🦀">🦀</button>
+                <button ws-send name="emoji" value="🐸">🐸</button>
+                <button ws-send name="emoji" value="🐵">🐵</button>
+                <button ws-send name="emoji" value="🦄">🦄</button>
+                <button ws-send name="emoji" value="🐝">🐝</button>
+                <button ws-send name="emoji" value="🐙">🐙</button>
+                <button ws-send name="emoji" value="🦋">🦋</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2: Color selection -->
+        <div class="step" id="step-2" style="display:none;">
+          <div class="section-label">Step 2: Choose a color</div>
+          <div class="controls" onclick="handleSelection(event)">
+            <div class="control-group">
+              <div class="color-grid">
+                <button ws-send name="color" value="#1967D2" style="background-color: #1967D2;"></button>
+                <button ws-send name="color" value="#C5221F" style="background-color: #C5221F;"></button>
+                <button ws-send name="color" value="#F29900" style="background-color: #F29900;"></button>
+                <button ws-send name="color" value="#188038" style="background-color: #188038;"></button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 3: System Metrics -->
+        <div class="step" id="step-3" style="display:none;">
+          <div class="section-label">Step 3: Live System Metrics</div>
+          <div id="system-readout" class="terminal-box">
+            <!-- Injected by backend as terminal lines -->
+            <div class="terminal-line">Initializing...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stepper Navigation -->
+      <div id="stepper-nav">
+        <button id="btn-prev" class="nav-btn" onclick="prevStep()" disabled>BACK</button>
+        <button id="btn-next" class="nav-btn" onclick="nextStep()">NEXT</button>
+      </div>
     </div>
+  </div>
 </body>
+
 </html>
