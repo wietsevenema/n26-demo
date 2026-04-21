@@ -391,6 +391,12 @@ body {
     background-color: #e8eaed;
 }
 
+.nav-btn:disabled {
+    background-color: #dadce0 !important;
+    color: #70757a !important;
+    cursor: not-allowed;
+}
+
 .controls {
     display: flex;
     flex-direction: column;
@@ -415,21 +421,32 @@ body {
 .emoji-grid, .color-grid {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
-    gap: 10px;
+    gap: 12px;
     justify-items: center;
-    max-width: 320px;
+    width: 100%;
+    max-width: 450px;
     margin: 0 auto;
 }
 
 .emoji-grid button, .color-grid button {
     font-family: "Noto Color Emoji", sans-serif;
-    padding: 10px;
+    padding: 15px 10px;
     border: 1px solid #dadce0;
-    border-radius: 8px;
+    border-radius: 12px;
     background: white;
     cursor: pointer;
-    font-size: 1.4rem;
+    font-size: 2rem;
+    width: 100%;
+    aspect-ratio: 1/1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     transition: all 0.2s;
+}
+
+/* Specific sizing for color buttons to match emoji grid feel */
+.color-grid button {
+    font-size: 0; /* Hide any accidental text */
 }
 
 .emoji-grid button:hover, .color-grid button:hover {
@@ -439,7 +456,16 @@ body {
 }
 
 .emoji-grid button.selected, .color-grid button.selected {
-    border: 3px solid #1a73e8 !important;
-    box-shadow: 0 0 10px rgba(26, 115, 232, 0.3);
-    transform: scale(1.05);
+    border: 4px solid #1a73e8 !important;
+    box-shadow: 0 0 15px rgba(26, 115, 232, 0.4);
+    transform: scale(1.08);
+}
+
+/* Step-specific overrides */
+#step-1 {
+    width: 100%;
+}
+
+.step-hidden-nav #stepper-nav {
+    display: none;
 }

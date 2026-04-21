@@ -45,20 +45,33 @@ if (typeof window !== 'undefined') {
     };
 
     let currentStep = 1;
-    const totalSteps = 8;
+    const totalSteps = 3;
 
     window.showStep = function(step) {
         document.querySelectorAll('.step').forEach(el => el.style.display = 'none');
         const activeStep = document.getElementById(`step-${step}`);
         if (activeStep) activeStep.style.display = 'block';
         
-        // Update nav buttons
+        // Navigation footer logic
+        const activeView = document.getElementById('active-view');
         const prevBtn = document.getElementById('btn-prev');
         const nextBtn = document.getElementById('btn-next');
-        if (prevBtn) prevBtn.disabled = (step === 1);
+
+        if (activeView) activeView.classList.remove('step-hidden-nav');
+        
+        if (prevBtn) {
+            prevBtn.disabled = (step === 1);
+        }
+        
         if (nextBtn) {
             nextBtn.disabled = (step === totalSteps);
-            nextBtn.innerText = (step === totalSteps) ? 'FINISH' : 'NEXT';
+            if (step === 1) {
+                nextBtn.innerText = 'NEXT';
+            } else if (step === 2) {
+                nextBtn.innerText = 'CONNECT';
+            } else if (step === 3) {
+                nextBtn.innerText = 'CONNECTED';
+            }
         }
         
         currentStep = step;
@@ -98,6 +111,11 @@ if (typeof window !== 'undefined') {
         
         // Add to clicked
         btn.classList.add('selected');
+
+        // Auto-advance from step 1 to step 2
+        if (currentStep === 1 && btn.name === 'emoji') {
+            setTimeout(() => nextStep(), 200);
+        }
     };
 
     window.updateSelectionVisuals = function(emoji, color) {
