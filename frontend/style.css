@@ -30,6 +30,8 @@ body {
   flex-direction: column;
   background-color: #f1f3f4;
   /* Slightly different bg for dashboard */
+  height: 100vh;
+  overflow: hidden;
 }
 
 .dashboard-header {
