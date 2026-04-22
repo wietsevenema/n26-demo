@@ -25,7 +25,7 @@ logging.basicConfig(
 logger = logging.getLogger("simulation")
 
 # Configuration
-DEFAULT_WS_URL = "ws://34.160.220.162/ws"
+DEFAULT_WS_URL = "wss://n26.wietsevenema.eu/ws"
 DEFAULT_TARGET = 30
 MAX_ALLOWED = 1000
 
