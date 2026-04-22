@@ -16,14 +16,6 @@
 
   <link rel="stylesheet" href="style.css">
 
-  <script>
-    // Prevent FOUT (Flash of Unstyled Text)
-    document.documentElement.classList.add('fonts-loading');
-    document.fonts.ready.then(() => {
-      document.documentElement.classList.remove('fonts-loading');
-    });
-  </script>
-
   <script type="module">
     import { initializeApp } from "./vendor/firebase-app.js";
     import { getFirestore, collection, onSnapshot } from "./vendor/firebase-firestore.js";
@@ -69,15 +61,18 @@
       if (slotCount === 0) return;
 
       // Use the actual height available for the grid (viewport minus header)
-      const vWidth = window.innerWidth;
-      const headerHeight = document.querySelector('.dashboard-header').offsetHeight;
-      const vHeight = window.innerHeight - headerHeight - 4; // -4 for the main padding
+      const vWidth = window.innerWidth - 10; // Extra horizontal buffer
+      const headerEl = document.querySelector('.dashboard-header');
+      const headerHeight = headerEl ? headerEl.offsetHeight : 0;
+      // Subtract header, main padding (4px), and extra safety buffer (20px)
+      const vHeight = window.innerHeight - headerHeight - 24; 
+
+      if (vHeight <= 0) return;
 
       const viewportAspect = vWidth / vHeight;
 
       // QR code takes S*S cells but is only 1 child
       const effectiveSlotCount = slotCount - 1 + (currentQrSpan * currentQrSpan);
-
       const idealCols = Math.sqrt(effectiveSlotCount * viewportAspect);
       const options = [Math.floor(idealCols), Math.ceil(idealCols)].filter(c => c > 0);
 
